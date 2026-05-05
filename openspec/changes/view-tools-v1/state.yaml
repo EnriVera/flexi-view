@@ -1,0 +1,16 @@
+change: view-tools-v1
+created: 2026-05-05
+status: in-progress
+
+dag:
+  explore:    done
+  proposal:   done
+  spec:       done
+  design:     done
+  tasks:      done
+  apply:      pending
+  verify:     pending
+  archive:    pending
+
+artifact_store: hybrid
+execution_mode: auto
