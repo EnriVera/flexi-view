@@ -8,13 +8,13 @@ export type {
 } from './types.js';
 export { configureGrid } from './registry.js';
 
-import './controls/dv-text.js';
-import './controls/dv-number.js';
-import './controls/dv-date.js';
-import './controls/dv-badge.js';
+import './controls/fv-text.js';
+import './controls/fv-number.js';
+import './controls/fv-date.js';
+import './controls/fv-badge.js';
 
-import './components/data-grid.js';
-import './components/data-list.js';
-import './components/data-cards.js';
-import './components/data-view.js';
-import './components/view-switcher.js';
+import './components/fv-grid.js';
+import './components/fv-list.js';
+import './components/fv-cards.js';
+import './components/fv-view.js';
+import './components/fv-switcher.js';

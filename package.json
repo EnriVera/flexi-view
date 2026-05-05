@@ -1,10 +1,10 @@
 {
-  "name": "view-tools",
+  "name": "flexi-view",
   "version": "0.0.1",
   "description": "Framework-agnostic multi-view data library built with Web Components",
   "type": "module",
-  "main": "dist/view-tools.umd.js",
-  "module": "dist/view-tools.es.js",
+  "main": "dist/flexi-view.umd.js",
+  "module": "dist/flexi-view.es.js",
   "types": "src/index.d.ts",
   "files": [
     "dist",

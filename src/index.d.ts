@@ -4,16 +4,29 @@ import { ColumnConfig } from './types'
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
-      'data-view': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+      'fv-view': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
         data?: unknown[]
         columns?: ColumnConfig[]
         view?: 'grid' | 'list' | 'cards'
         'show-switcher'?: boolean
         'storage-key'?: string
+        'sync-url'?: boolean
       }, HTMLElement>
-      'data-switch': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+      'fv-switcher': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
         for?: string
         activeView?: 'grid' | 'list' | 'cards'
+      }, HTMLElement>
+      'fv-grid': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+        data?: unknown[]
+        columns?: ColumnConfig[]
+      }, HTMLElement>
+      'fv-list': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+        data?: unknown[]
+        columns?: ColumnConfig[]
+      }, HTMLElement>
+      'fv-cards': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+        data?: unknown[]
+        columns?: ColumnConfig[]
       }, HTMLElement>
     }
   }

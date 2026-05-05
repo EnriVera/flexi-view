@@ -7,8 +7,8 @@ import { readState, writeState } from '../utils/persistence.js';
 
 type View = 'grid' | 'list' | 'cards';
 
-@customElement('data-view')
-export class DataView<T = Record<string, unknown>> extends LitElement {
+@customElement('fv-view')
+export class FvView<T = Record<string, unknown>> extends LitElement {
   static styles = css`
     :host { display: block; }
   `;

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DvBadge } from '../../controls/dv-badge.js';
+import { FvBadge } from '../../controls/fv-badge.js';
 
-describe('DvBadge', () => {
+describe('FvBadge', () => {
   beforeEach(() => {
     const defined = new Map<string, CustomElementConstructor>();
     vi.stubGlobal('customElements', {
@@ -13,7 +13,7 @@ describe('DvBadge', () => {
 
   describe('Props', () => {
     it('acepta item y params como properties', () => {
-      const element = new DvBadge();
+      const element = new FvBadge();
       (element as any).item = { status: 'active' };
       (element as any).params = { field: 'status' };
       
@@ -22,7 +22,7 @@ describe('DvBadge', () => {
     });
 
     it('acepta color en params', () => {
-      const element = new DvBadge();
+      const element = new FvBadge();
       (element as any).params = { field: 'status', color: '#ff0000' };
       
       expect((element as any).params.color).toBe('#ff0000');

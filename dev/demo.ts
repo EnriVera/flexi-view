@@ -26,12 +26,12 @@ const data: Employee[] = [
 ];
 
 const columns: ColumnConfig<Employee>[] = [
-  { control: 'dv-text', field: 'name', title: 'Name', sortable: true, filterable: true },
-  { control: 'dv-text', field: 'department', title: 'Department', sortable: true, filterable: true },
-  { control: 'dv-number', field: 'salary', title: 'Salary', sortable: true },
-  { control: 'dv-date', field: 'startDate', title: 'Start Date', sortable: true },
+  { control: 'fv-text', field: 'name', title: 'Name', sortable: true, filterable: true },
+  { control: 'fv-text', field: 'department', title: 'Department', sortable: true, filterable: true },
+  { control: 'fv-number', field: 'salary', title: 'Salary', sortable: true },
+  { control: 'fv-date', field: 'startDate', title: 'Start Date', sortable: true },
   {
-    control: 'dv-badge',
+    control: 'fv-badge',
     field: 'status',
     title: 'Status',
     params: { color: '' },
@@ -39,7 +39,7 @@ const columns: ColumnConfig<Employee>[] = [
   },
 ];
 
-const view = document.querySelector('data-view') as HTMLElement & {
+const view = document.querySelector('fv-view') as HTMLElement & {
   data: Employee[];
   columns: ColumnConfig<Employee>[];
 };

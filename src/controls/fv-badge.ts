@@ -1,8 +1,8 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-@customElement('dv-badge')
-export class DvBadge extends LitElement {
+@customElement('fv-badge')
+export class FvBadge extends LitElement {
   static styles = css`
     :host { display: inline-block; }
     .badge {

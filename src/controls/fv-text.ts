@@ -1,8 +1,8 @@
 import { LitElement, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 
-@customElement('dv-text')
-export class DvText extends LitElement {
+@customElement('fv-text')
+export class FvText extends LitElement {
   @property({ attribute: false }) item: Record<string, unknown> = {};
   @property({ attribute: false }) params: Record<string, unknown> & { field?: string } = {};
 

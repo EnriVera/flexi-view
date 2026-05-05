@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DataList } from '../../components/data-list.js';
+import { FvList } from '../../components/fv-list.js';
 
-describe('DataList', () => {
+describe('FvList', () => {
   beforeEach(() => {
     const defined = new Map<string, CustomElementConstructor>();
     vi.stubGlobal('customElements', {
@@ -13,7 +13,7 @@ describe('DataList', () => {
 
   describe('_rowClick', () => {
     it('dispatchea row-click con item e index', () => {
-      const element = new DataList();
+      const element = new FvList();
       const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
       
       (element as any)._rowClick({ name: 'Alice' }, 0);
@@ -26,7 +26,7 @@ describe('DataList', () => {
     });
 
     it('pasa el index correcto', () => {
-      const element = new DataList();
+      const element = new FvList();
       const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
       
       (element as any)._rowClick({ name: 'Bob' }, 5);

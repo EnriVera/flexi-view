@@ -1,27 +1,27 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DataView } from '../../components/data-view.js';
+import { FvView } from '../../components/fv-view.js';
 
-// Mock de localStorage
-const createStorageMock = (initial: Record<string, string> = {}) => {
-  const store: Record<string, string> = { ...initial };
+// Mocks para tests
+function createStorageMock() {
+  const store: Record<string, string> = {};
   return {
     getItem: vi.fn((key: string) => store[key] ?? null),
     setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
     removeItem: vi.fn((key: string) => { delete store[key]; }),
     clear: vi.fn(() => { Object.keys(store).forEach(k => delete store[k]); }),
   };
-};
+}
 
-// Mock de window
-const createWindowMock = () => ({
-  location: { hash: '' },
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-  setInterval: vi.fn(() => 1),
-  clearInterval: vi.fn(),
-});
+function createWindowMock() {
+  return {
+    location: { hash: '' },
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    history: { pushState: vi.fn() },
+  };
+}
 
-describe('DataView', () => {
+describe('FvView', () => {
   let storageMock: ReturnType<typeof createStorageMock>;
   let windowMock: ReturnType<typeof createWindowMock>;
   let originalCustomElements: typeof customElements;
@@ -50,7 +50,7 @@ describe('DataView', () => {
 
   describe('_persistPayload', () => {
     it('genera payload correcto con view, order y filter', () => {
-      const element = new DataView();
+      const element = new FvView();
       (element as any)._activeView = 'list';
       (element as any)._filters = { name: 'Alice' };
       (element as any)._sortConfig = { field: 'name', direction: 'asc' };
@@ -63,7 +63,7 @@ describe('DataView', () => {
     });
 
     it('genera payload sin order cuando no hay sortConfig', () => {
-      const element = new DataView();
+      const element = new FvView();
       (element as any)._activeView = 'grid';
       (element as any)._filters = {};
       (element as any)._sortConfig = null;
@@ -74,7 +74,7 @@ describe('DataView', () => {
     });
 
     it('convierte desc a des', () => {
-      const element = new DataView();
+      const element = new FvView();
       (element as any)._activeView = 'cards';
       (element as any)._sortConfig = { field: 'name', direction: 'desc' };
       
@@ -84,7 +84,7 @@ describe('DataView', () => {
     });
 
     it('convierte filtros a formato de array', () => {
-      const element = new DataView();
+      const element = new FvView();
       (element as any)._activeView = 'grid';
       (element as any)._filters = { name: 'Alice', age: '25' };
       
@@ -101,7 +101,7 @@ describe('DataView', () => {
     it('llama a writeState cuando view cambia con storageKey', () => {
       storageMock.getItem.mockReturnValue(null);
       
-      const element = new DataView();
+      const element = new FvView();
       (element as any).storageKey = 'test-key';
       (element as any).view = 'cards';
       
@@ -112,7 +112,7 @@ describe('DataView', () => {
     });
 
     it('actualiza URL cuando syncUrl=true y view cambia', () => {
-      const element = new DataView();
+      const element = new FvView();
       (element as any).syncUrl = true;
       (element as any).view = 'list';
       
@@ -125,21 +125,21 @@ describe('DataView', () => {
 
   describe('View type válido', () => {
     it('acepta grid como view válida', () => {
-      const element = new DataView();
+      const element = new FvView();
       (element as any).view = 'grid';
       
       expect(['grid', 'list', 'cards']).toContain((element as any).view);
     });
 
     it('acepta list como view válida', () => {
-      const element = new DataView();
+      const element = new FvView();
       (element as any).view = 'list';
       
       expect(['grid', 'list', 'cards']).toContain((element as any).view);
     });
 
     it('acepta cards como view válida', () => {
-      const element = new DataView();
+      const element = new FvView();
       (element as any).view = 'cards';
       
       expect(['grid', 'list', 'cards']).toContain((element as any).view);

@@ -3,19 +3,19 @@ import { customElement, property } from 'lit/decorators.js';
 import type { ColumnConfig, SortChangeDetail, FilterChangeDetail } from '../types.js';
 import { resolveControl } from '../registry.js';
 
-@customElement('data-grid')
-export class DataGrid<T = Record<string, unknown>> extends LitElement {
+@customElement('fv-grid')
+export class FvGrid<T = Record<string, unknown>> extends LitElement {
   static styles = css`
     :host { display: block; overflow-x: auto; }
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
-      background: var(--dv-bg, #fff);
+      background: var(--fv-bg, #fff);
     }
     th {
-      background: var(--dv-header-bg, #fafafa);
-      border-bottom: 2px solid var(--dv-border, #f0f0f0);
+      background: var(--fv-header-bg, #fafafa);
+      border-bottom: 2px solid var(--fv-border, #f0f0f0);
       padding: 12px 16px;
       text-align: left;
       font-weight: 600;
@@ -28,19 +28,19 @@ export class DataGrid<T = Record<string, unknown>> extends LitElement {
     th.sortable:hover { background: #f5f5f5; }
     th.sorted { color: #111; }
     td {
-      border-bottom: 1px solid var(--dv-border, #f5f5f5);
+      border-bottom: 1px solid var(--fv-border, #f5f5f5);
       padding: 12px 16px;
       color: #333;
     }
-    tr:hover td { background: var(--dv-row-hover, #fafafa); }
+    tr:hover td { background: var(--fv-row-hover, #fafafa); }
     input[type='text'] {
       width: 100%;
       box-sizing: border-box;
-      border: 1px solid var(--dv-border, #e0e0e0);
+      border: 1px solid var(--fv-border, #e0e0e0);
       border-radius: 4px;
       padding: 6px 10px;
       font-size: 12px;
-      background: var(--dv-bg, #fff);
+      background: var(--fv-bg, #fff);
     }
     input[type='text']:focus {
       outline: none;

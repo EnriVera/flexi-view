@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DataCards } from '../../components/data-cards.js';
+import { FvCards } from '../../components/fv-cards.js';
 
-describe('DataCards', () => {
+describe('FvCards', () => {
   beforeEach(() => {
     const defined = new Map<string, CustomElementConstructor>();
     vi.stubGlobal('customElements', {
@@ -13,7 +13,7 @@ describe('DataCards', () => {
 
   describe('_renderField', () => {
     it('retorna vacío cuando visible=false', () => {
-      const element = new DataCards();
+      const element = new FvCards();
       const row = { name: 'Alice', id: 1 };
       const col = { field: 'id', title: 'ID', visible: false };
       
@@ -30,7 +30,7 @@ describe('DataCards', () => {
 
   describe('_rowClick', () => {
     it('dispatchea row-click con item e index', () => {
-      const element = new DataCards();
+      const element = new FvCards();
       const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
       
       (element as any)._rowClick({ title: 'Alice' }, 0);

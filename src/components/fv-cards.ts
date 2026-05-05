@@ -3,8 +3,8 @@ import { customElement, property } from 'lit/decorators.js';
 import type { ColumnConfig, RowClickDetail } from '../types.js';
 import { resolveControl } from '../registry.js';
 
-@customElement('data-cards')
-export class DataCards<T = Record<string, unknown>> extends LitElement {
+@customElement('fv-cards')
+export class FvCards<T = Record<string, unknown>> extends LitElement {
   static styles = css`
     :host { display: block; }
     .grid {
@@ -17,9 +17,9 @@ export class DataCards<T = Record<string, unknown>> extends LitElement {
       display: flex;
       flex-direction: column;
       padding: 20px;
-      border: 1px solid var(--dv-border, #f0f0f0);
+      border: 1px solid var(--fv-border, #f0f0f0);
       border-radius: 8px;
-      background: var(--dv-bg, #fff);
+      background: var(--fv-bg, #fff);
       cursor: pointer;
       font-size: 13px;
       transition: all 0.2s ease;

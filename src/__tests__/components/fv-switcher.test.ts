@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DataSwitch } from '../../components/view-switcher.js';
+import { FvSwitcher } from '../../components/fv-switcher.js';
 
-describe('DataSwitch (view-switcher)', () => {
+describe('FvSwitcher', () => {
   let originalCustomElements: typeof customElements;
 
   beforeEach(() => {
@@ -25,7 +25,7 @@ describe('DataSwitch (view-switcher)', () => {
 
   describe('Ciclo de vistas', () => {
     it('grid → list en primer click', () => {
-      const element = new DataSwitch();
+      const element = new FvSwitcher();
       (element as any).activeView = 'grid';
       (element as any)._cycle();
       
@@ -33,7 +33,7 @@ describe('DataSwitch (view-switcher)', () => {
     });
 
     it('list → cards en segundo click', () => {
-      const element = new DataSwitch();
+      const element = new FvSwitcher();
       (element as any).activeView = 'list';
       (element as any)._cycle();
       
@@ -41,7 +41,7 @@ describe('DataSwitch (view-switcher)', () => {
     });
 
     it('cards → grid en tercer click (ciclo completo)', () => {
-      const element = new DataSwitch();
+      const element = new FvSwitcher();
       (element as any).activeView = 'cards';
       (element as any)._cycle();
       
@@ -49,7 +49,7 @@ describe('DataSwitch (view-switcher)', () => {
     });
 
     it('tres clicks возвращают a grid', () => {
-      const element = new DataSwitch();
+      const element = new FvSwitcher();
       (element as any).activeView = 'grid';
       
       (element as any)._cycle(); // grid → list
@@ -62,7 +62,7 @@ describe('DataSwitch (view-switcher)', () => {
 
   describe('dispatch de eventos', () => {
     it('dispatchea view-change con la nueva vista', () => {
-      const element = new DataSwitch();
+      const element = new FvSwitcher();
       (element as any).activeView = 'grid';
       const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
       
@@ -83,7 +83,7 @@ describe('DataSwitch (view-switcher)', () => {
         removeEventListener: vi.fn(),
       });
       
-      const element = new DataSwitch();
+      const element = new FvSwitcher();
       (element as any).syncUrl = true;
       (element as any).activeView = 'grid';
       
@@ -105,7 +105,7 @@ describe('DataSwitch (view-switcher)', () => {
         getElementById: (id: string) => id === 'dv' ? mockTarget : null,
       });
       
-      const element = new DataSwitch();
+      const element = new FvSwitcher();
       (element as any).targetFor = 'dv';
       (element as any).firstUpdated();
       

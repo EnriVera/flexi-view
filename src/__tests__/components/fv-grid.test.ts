@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DataGrid } from '../../components/data-grid.js';
+import { FvGrid } from '../../components/fv-grid.js';
 
-describe('DataGrid', () => {
+describe('FvGrid', () => {
   beforeEach(() => {
     const defined = new Map<string, CustomElementConstructor>();
     vi.stubGlobal('customElements', {
@@ -13,14 +13,14 @@ describe('DataGrid', () => {
 
   describe('_hasFilterableColumns', () => {
     it('retorna true cuando hay columnas filterable', () => {
-      const element = new DataGrid();
+      const element = new FvGrid();
       (element as any).columns = [{ field: 'name', title: 'Name', filterable: true }];
       
       expect((element as any)._hasFilterableColumns).toBe(true);
     });
 
     it('retorna false cuando ninguna columna es filterable', () => {
-      const element = new DataGrid();
+      const element = new FvGrid();
       (element as any).columns = [
         { field: 'name', title: 'Name', filterable: false },
         { field: 'age', title: 'Age' },
@@ -30,7 +30,7 @@ describe('DataGrid', () => {
     });
 
     it('retorna false cuando columns está vacío', () => {
-      const element = new DataGrid();
+      const element = new FvGrid();
       (element as any).columns = [];
       
       expect((element as any)._hasFilterableColumns).toBe(false);
@@ -39,7 +39,7 @@ describe('DataGrid', () => {
 
   describe('_sort', () => {
     it('dispatchea sort-change con direction asc cuando es primer sort', () => {
-      const element = new DataGrid();
+      const element = new FvGrid();
       const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
       (element as any).columns = [{ field: 'name', title: 'Name', sortable: true }];
       
@@ -54,7 +54,7 @@ describe('DataGrid', () => {
     });
 
     it('toggle direction a desc en segundo click', () => {
-      const element = new DataGrid();
+      const element = new FvGrid();
       const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
       (element as any)._sortField = 'name';
       (element as any)._sortDir = 'asc';
@@ -67,7 +67,7 @@ describe('DataGrid', () => {
     });
 
     it('resetea a asc cuando cambia de campo', () => {
-      const element = new DataGrid();
+      const element = new FvGrid();
       (element as any)._sortField = 'name';
       (element as any)._sortDir = 'desc';
       (element as any).columns = [{ field: 'age', title: 'Age', sortable: true }];
@@ -82,7 +82,7 @@ describe('DataGrid', () => {
 
   describe('_emitFilter', () => {
     it('dispatchea filter-change con el valor', () => {
-      const element = new DataGrid();
+      const element = new FvGrid();
       const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
       
       (element as any)._emitFilter({ field: 'name', title: 'Name' }, 'Alice');
@@ -95,7 +95,7 @@ describe('DataGrid', () => {
     });
 
     it('usa title como field cuando field es undefined', () => {
-      const element = new DataGrid();
+      const element = new FvGrid();
       const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
       
       (element as any)._emitFilter({ field: undefined, title: 'Name' }, 'test');
