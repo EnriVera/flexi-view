@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { configureGrid, resolveControl, _resetRegistryForTesting } from './registry.js';
+import { configureGrid, resolveControl, _resetRegistryForTesting } from '../../registry.js';
 
 const defined = new Map<string, CustomElementConstructor>();
 

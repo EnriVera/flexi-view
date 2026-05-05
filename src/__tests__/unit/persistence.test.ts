@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { readState, writeState } from '../utils/persistence.js';
+import { readState, writeState } from '../../utils/persistence.js';
 
 const KEY = 'test-persist-key';
 

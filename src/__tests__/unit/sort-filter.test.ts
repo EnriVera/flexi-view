@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applySort, applyFilters } from '../utils/sort-filter.js';
+import { applySort, applyFilters } from '../../utils/sort-filter.js';
 
 const items = [
   { name: 'Charlie', age: 30, status: 'active' },
