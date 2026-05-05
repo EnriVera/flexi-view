@@ -111,13 +111,6 @@ export class DataSwitch extends LitElement {
         composed: true,
       })
     );
-    
-    if (this.targetFor) {
-      const target = document.getElementById(this.targetFor) as HTMLElement | null;
-      if (target) {
-        (target as any).view = view;
-      }
-    }
   }
 
   render() {
@@ -143,6 +136,15 @@ export class DataSwitch extends LitElement {
       this._updateUrl(nextView);
     }
     
+    // 1. Dispara evento para sincronización general
     this._notifyChange(nextView);
+    
+    // 2. Actualiza directamente el target (fallback seguro)
+    if (this.targetFor) {
+      const target = document.getElementById(this.targetFor) as HTMLElement | null;
+      if (target) {
+        (target as any).view = nextView;
+      }
+    }
   }
 }

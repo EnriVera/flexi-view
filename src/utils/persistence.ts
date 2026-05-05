@@ -1,9 +1,12 @@
-import type { SortChangeDetail } from '../types.js';
-
 export interface PersistedState {
-  activeView?: string;
-  filters?: Record<string, unknown>;
-  sortConfig?: SortChangeDetail | null;
+  views: string | null;
+  order: string | null;
+  filter: FilterItem[] | null;
+}
+
+export interface FilterItem {
+  field: string;
+  value: unknown;
 }
 
 export function writeState(key: string | undefined, state: PersistedState): void {

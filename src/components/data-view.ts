@@ -1,6 +1,7 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { ColumnConfig, SortChangeDetail, FilterChangeDetail } from '../types.js';
+import type { FilterItem } from '../utils/persistence.js';
 import { applySort, applyFilters } from '../utils/sort-filter.js';
 import { readState, writeState } from '../utils/persistence.js';
 
@@ -27,6 +28,8 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
 
   @state() private _activeView: View = 'grid';
   private _hashListener?: () => void;
+  private _storagePoller?: number;
+  private _lastStorageValue?: string;
   private _initialized = false;
   @state() private _filters: Record<string, unknown> = {};
   @state() private _sortConfig: SortChangeDetail | null = null;
@@ -62,6 +65,29 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
   get columns(): ColumnConfig<T>[] { return this._columns; }
 
   willUpdate(changedProperties: Map<string, unknown>) {
+    // Guardar en localStorage cuando cambia la propiedad 'view'
+    if (changedProperties.has('view') && this.storageKey) {
+      // Usar la nueva propiedad 'view' directamente, no el state interno
+      const newView = this.view;
+      
+      // Convertir filtros y orden
+      const filter: FilterItem[] | null = Object.keys(this._filters).length > 0
+        ? Object.entries(this._filters).map(([field, value]) => ({ field, value }))
+        : null;
+      const order = this._sortConfig?.direction === 'asc' ? 'as' 
+        : this._sortConfig?.direction === 'desc' ? 'des' 
+        : null;
+      
+      const payload = { views: newView, order, filter };
+      writeState(this.storageKey, payload);
+      this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
+    }
+    
+    // Actualizar URL si syncUrl está habilitado
+    if (changedProperties.has('view') && this.syncUrl && this.view) {
+      this._updateUrl(this.view);
+    }
+    
     // Solo sincronizar después de inicializado (evitar que attribute sobreescriba URL)
     if (this._initialized && changedProperties.has('view') && this.view) {
       if (['grid', 'list', 'cards'].includes(this.view)) {
@@ -72,7 +98,10 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
 
   private _onSortChange = (e: Event) => {
     this._sortConfig = (e as CustomEvent<SortChangeDetail>).detail;
-    writeState(this.storageKey, this._persistPayload);
+    if (this.storageKey) {
+      writeState(this.storageKey, this._persistPayload);
+      this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
+    }
   };
 
   private _onFilterChange = (e: Event) => {
@@ -84,38 +113,33 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
     } else {
       this._filters = { ...this._filters, [field]: value };
     }
-    writeState(this.storageKey, this._persistPayload);
+    if (this.storageKey) {
+      writeState(this.storageKey, this._persistPayload);
+      this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
+    }
   };
 
   private _onViewChange = (e: Event) => {
-    // Solo procesar eventos de data-switch con attribute 'for' (external)
-    // que nos targetea directamente
-    const target = e.composedPath()[0] as HTMLElement;
-    if (!target || target.tagName?.toLowerCase() !== 'data-switch') return;
-    
-    // Solo procesar si este switcher nos tiene como target
-    const forAttr = target.getAttribute('for');
-    if (forAttr && forAttr !== this.id) return;
-    
-    const event = e as CustomEvent<{ view: View }>;
-    const newView = event.detail.view;
-    
-    // Sincronizar AMBOS: property y state
-    this.view = newView;
-    this._activeView = newView;
-    
-    if (this.syncUrl) {
-      this._updateUrl(newView);
-    }
-    
-    writeState(this.storageKey, this._persistPayload);
+    // El guardado ya se hace en willUpdate cuando cambia la property 'view'
+    // Aquí solo necesitamos sincronizar el estado interno si no se actualizó por property
+    // No hacemos nada porque el switcher también actualiza directamente this.view
   };
 
   private get _persistPayload() {
+    // Convertir filters a array de FilterItem
+    const filter: FilterItem[] | null = Object.keys(this._filters).length > 0
+      ? Object.entries(this._filters).map(([field, value]) => ({ field, value }))
+      : null;
+    
+    // Convertir direction: asc → as, desc → des
+    const order = this._sortConfig?.direction === 'asc' ? 'as' 
+      : this._sortConfig?.direction === 'desc' ? 'des' 
+      : null;
+    
     return {
-      activeView: this._activeView,
-      filters: this._filters,
-      sortConfig: this._sortConfig,
+      views: this._activeView,
+      order,
+      filter,
     };
   }
 
@@ -128,6 +152,65 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
       this._activeView = urlView as View;
       this.view = urlView as View;
       this.requestUpdate();
+      // Guardar en localStorage cuando la URL cambia
+      if (this.storageKey) {
+        writeState(this.storageKey, this._persistPayload);
+      }
+    }
+  };
+
+  private _checkStorageChange = () => {
+    if (!this.storageKey) return;
+    
+    const currentValue = localStorage.getItem(this.storageKey);
+    
+    // Solo reaccionar si el valor cambió Y es diferente de lo que tenemos en memoria
+    // Esto detecta cuando el usuario borra desde DevTools (no cuando guardamos nosotros mismos)
+    if (currentValue !== this._lastStorageValue) {
+      this._lastStorageValue = currentValue || '';
+      
+      // Si el valor es null o vacío, el usuario borró el storage
+      if (!currentValue) {
+        // Restaurar a valores por defecto
+        this._activeView = 'grid';
+        this.view = 'grid';
+        this._filters = {};
+        this._sortConfig = null;
+        this.requestUpdate();
+        return;
+      }
+      
+      // Si hay datos, verificar si son diferentes a nuestro estado actual
+      try {
+        const saved = JSON.parse(currentValue);
+        
+        // Solo actualizar si los datos son distintos a nuestro estado interno
+        const currentPayload = JSON.stringify(this._persistPayload);
+        if (currentValue !== currentPayload) {
+          // Restaurar desde localStorage
+          if (saved.views && ['grid', 'list', 'cards'].includes(saved.views)) {
+            this._activeView = saved.views as View;
+            this.view = saved.views as View;
+          }
+          
+          if (saved.filter && Array.isArray(saved.filter)) {
+            const filters: Record<string, unknown> = {};
+            for (const item of saved.filter) {
+              filters[item.field] = item.value;
+            }
+            this._filters = filters;
+          }
+          
+          if (saved.order) {
+            const direction = (saved.order === 'as' ? 'asc' : 'desc') as 'asc' | 'desc';
+            this._sortConfig = { field: '', direction };
+          }
+          
+          this.requestUpdate();
+        }
+      } catch {
+        // Ignore parse errors
+      }
     }
   };
 
@@ -136,25 +219,45 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
     
     // PRIORIDAD: URL > localStorage > attribute > default
     const urlView = this.syncUrl ? this._getUrlView() : null;
+    let saved = readState(this.storageKey);
+    
+    // Si hay storage-key pero no hay datos en localStorage, inicializar con null
+    if (this.storageKey && !saved) {
+      const initialState = { views: null, order: null, filter: null };
+      writeState(this.storageKey, initialState);
+      saved = initialState;
+    }
     
     if (urlView) {
+      // URL tiene prioridad máxima
       this._activeView = urlView;
+      this.view = urlView;
+    } else if (saved?.views) {
+      // localStorage tiene prioridad sobre attribute
+      this._activeView = saved.views as View;
+      this.view = saved.views as View;
     } else {
-      // Solo si NO hay URL, usar localStorage o attribute
-      const saved = readState(this.storageKey);
-      if (saved?.activeView) {
-        this._activeView = saved.activeView as View;
-      } else {
-        // Fallback al attribute o default
-        const attrView = this.getAttribute('view');
-        if (attrView && ['grid', 'list', 'cards'].includes(attrView)) {
-          this._activeView = attrView as View;
-        }
-        if (saved) {
-          if (saved.filters) this._filters = saved.filters;
-          if (saved.sortConfig !== undefined) this._sortConfig = saved.sortConfig ?? null;
-        }
+      // Fallback al attribute o default
+      const attrView = this.getAttribute('view');
+      if (attrView && ['grid', 'list', 'cards'].includes(attrView)) {
+        this._activeView = attrView as View;
+        this.view = attrView as View;
       }
+    }
+    
+    // Restaurar order desde localStorage
+    if (saved?.order) {
+      const direction = (saved.order === 'as' ? 'asc' : 'desc') as 'asc' | 'desc';
+      this._sortConfig = { field: '', direction };
+    }
+    
+    // Restaurar filter desde localStorage
+    if (saved?.filter && Array.isArray(saved.filter)) {
+      const filters: Record<string, unknown> = {};
+      for (const item of saved.filter) {
+        filters[item.field] = item.value;
+      }
+      this._filters = filters;
     }
     
     // Actualizar URL para que esté sincronizada con el estado inicial
@@ -169,6 +272,12 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
     if (this.syncUrl) {
       this._hashListener = () => this._onHashChange();
       window.addEventListener('hashchange', this._hashListener);
+    }
+    
+    // Polling para detectar cambios en localStorage (el evento 'storage' no funciona en la misma página)
+    if (this.storageKey) {
+      this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
+      this._storagePoller = window.setInterval(() => this._checkStorageChange(), 500);
     }
     
     this._initialized = true;
@@ -195,6 +304,9 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
     super.disconnectedCallback();
     if (this._hashListener) {
       window.removeEventListener('hashchange', this._hashListener);
+    }
+    if (this._storagePoller) {
+      window.clearInterval(this._storagePoller);
     }
     this.removeEventListener('sort-change', this._onSortChange);
     this.removeEventListener('filter-change', this._onFilterChange);
