@@ -1,5 +1,5 @@
 export interface ColumnConfig<T = Record<string, unknown>> {
-  control: string;
+  control?: string;
   params?: Record<string, unknown>;
   title: string;
   field?: keyof T;

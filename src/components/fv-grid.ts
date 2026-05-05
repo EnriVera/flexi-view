@@ -56,12 +56,8 @@ export class FvGrid<T = Record<string, unknown>> extends LitElement {
 
   updated(changed: Map<string, unknown>) {
     if (changed.has('columns')) {
-      this.columns.forEach(col => resolveControl(col.control));
+      this.columns.forEach(col => resolveControl(col.control || 'fv-text'));
     }
-  }
-
-  private get _hasFilterableColumns(): boolean {
-    return this.columns.some(col => col.filterable);
   }
 
   render() {
@@ -69,9 +65,6 @@ export class FvGrid<T = Record<string, unknown>> extends LitElement {
       <table>
         <thead>
           <tr>${this.columns.map(col => this._renderHeader(col))}</tr>
-          ${this._hasFilterableColumns
-            ? html`<tr>${this.columns.map(col => this._renderFilterCell(col))}</tr>`
-            : ''}
         </thead>
         <tbody>
           ${this.data.map((row, i) => html`
@@ -94,20 +87,6 @@ export class FvGrid<T = Record<string, unknown>> extends LitElement {
     `;
   }
 
-  private _renderFilterCell(col: ColumnConfig<T>) {
-    if (!col.filterable) return html`<th></th>`;
-    return html`
-      <th>
-        <input
-          type="text"
-          placeholder="Filter…"
-          @input=${(e: Event) =>
-            this._emitFilter(col, (e.target as HTMLInputElement).value)}
-        />
-      </th>
-    `;
-  }
-
   private _renderCell(row: T, col: ColumnConfig<T>, index: number) {
     const visible =
       typeof col.visible === 'function'
@@ -120,12 +99,13 @@ export class FvGrid<T = Record<string, unknown>> extends LitElement {
     
     let displayValue = String(value ?? '');
     
-    if (col.control === 'dv-date' && value) {
+    const control = col.control || 'fv-text';
+    if (control === 'fv-date' && value) {
       const date = new Date(value as string);
       if (!isNaN(date.getTime())) {
         displayValue = date.toLocaleDateString();
       }
-    } else if (col.control === 'dv-number' && value != null) {
+    } else if (control === 'fv-number' && value != null) {
       displayValue = Number(value).toLocaleString();
     }
     

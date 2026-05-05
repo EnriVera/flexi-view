@@ -6,9 +6,9 @@ export default defineConfig({
   build: {
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
-      name: 'ViewTools',
+      name: 'FlexiView',
       formats: ['es', 'umd'],
-      fileName: (format) => `view-tools.${format}.js`,
+      fileName: (format) => `flexi-view.${format}.js`,
     },
     rollupOptions: {
       external: ['lit'],

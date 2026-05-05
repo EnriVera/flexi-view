@@ -11,6 +11,12 @@ type View = 'grid' | 'list' | 'cards';
 export class FvView<T = Record<string, unknown>> extends LitElement {
   static styles = css`
     :host { display: block; }
+    .controls {
+      display: flex;
+      flex-direction: row;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
   `;
 
   @property({ attribute: false }) 
@@ -25,6 +31,9 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   
   // showSwitcher como property - maneja React boolean y string
   @property({ type: Boolean }) showSwitcher = true;
+  
+  // showSearch como property - muestra el search integrado
+  @property({ type: Boolean, attribute: 'show-search' }) showSearch = true;
 
   @state() private _activeView: View = 'grid';
   private _hashListener?: () => void;
@@ -119,10 +128,34 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     }
   };
 
-  private _onViewChange = (e: Event) => {
-    // El guardado ya se hace en willUpdate cuando cambia la property 'view'
-    // Aquí solo necesitamos sincronizar el estado interno si no se actualizó por property
-    // No hacemos nada porque el switcher también actualiza directamente this.view
+private _onViewChange = (e: Event) => {
+    const { view } = (e as CustomEvent<{ view: string }>).detail;
+    if (view && ['grid', 'list', 'cards'].includes(view)) {
+      this._activeView = view as View;
+      this.view = view as View;
+      this.requestUpdate();
+    }
+  };
+
+  private _onSearch = (e: Event) => {
+    const { value } = (e as CustomEvent<{ value: string }>).detail;
+    // Buscar en todas las columnas que tienen field definido
+    const searchFields = this._columns
+      .filter(col => col.field != null)
+      .map(col => String(col.field));
+    
+    // Aplicar filtro de búsqueda a todos los campos
+    if (value === '' || value == null) {
+      this._filters = {};
+    } else {
+      // Crear un filtro especial que busca en cualquier campo
+      this._filters = { __search: value, __searchFields: searchFields };
+    }
+    
+    if (this.storageKey) {
+      writeState(this.storageKey, this._persistPayload);
+      this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
+    }
   };
 
   private get _persistPayload() {
@@ -268,6 +301,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     this.addEventListener('sort-change', this._onSortChange);
     this.addEventListener('filter-change', this._onFilterChange);
     this.addEventListener('view-change', this._onViewChange);
+    this.addEventListener('fv-search', this._onSearch as EventListener);
     
     if (this.syncUrl) {
       this._hashListener = () => this._onHashChange();
@@ -319,9 +353,13 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
 
   render() {
     const data = this._processedData;
-    // Mostrar switcher solo si showSwitcher es true
     return html`
-      ${this.showSwitcher ? html`<data-switch .activeView=${this._activeView}></data-switch>` : ''}
+      ${this.showSearch || this.showSwitcher ? html`
+        <div class="controls">
+          ${this.showSearch ? html`<fv-search placeholder="Search..." debounce></fv-search>` : ''}
+          ${this.showSwitcher ? html`<fv-switcher .activeView=${this._activeView} .targetFor=${this.id}></fv-switcher>` : ''}
+        </div>
+      ` : ''}
       ${this._renderView(data)}
     `;
   }
@@ -329,11 +367,11 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   private _renderView(data: T[]) {
     switch (this._activeView) {
       case 'list':
-        return html`<data-list .data=${data} .columns=${this._columns}></data-list>`;
+        return html`<fv-list .data=${data} .columns=${this._columns}></fv-list>`;
       case 'cards':
-        return html`<data-cards .data=${data} .columns=${this._columns}></data-cards>`;
+        return html`<fv-cards .data=${data} .columns=${this._columns}></fv-cards>`;
       default:
-        return html`<data-grid .data=${data} .columns=${this._columns}></data-grid>`;
+        return html`<fv-grid .data=${data} .columns=${this._columns}></fv-grid>`;
     }
   }
 }

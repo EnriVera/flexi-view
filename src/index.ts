@@ -18,3 +18,4 @@ import './components/fv-list.js';
 import './components/fv-cards.js';
 import './components/fv-view.js';
 import './components/fv-switcher.js';
+import './components/fv-search.js';

@@ -11,32 +11,6 @@ describe('FvGrid', () => {
     });
   });
 
-  describe('_hasFilterableColumns', () => {
-    it('retorna true cuando hay columnas filterable', () => {
-      const element = new FvGrid();
-      (element as any).columns = [{ field: 'name', title: 'Name', filterable: true }];
-      
-      expect((element as any)._hasFilterableColumns).toBe(true);
-    });
-
-    it('retorna false cuando ninguna columna es filterable', () => {
-      const element = new FvGrid();
-      (element as any).columns = [
-        { field: 'name', title: 'Name', filterable: false },
-        { field: 'age', title: 'Age' },
-      ];
-      
-      expect((element as any)._hasFilterableColumns).toBe(false);
-    });
-
-    it('retorna false cuando columns está vacío', () => {
-      const element = new FvGrid();
-      (element as any).columns = [];
-      
-      expect((element as any)._hasFilterableColumns).toBe(false);
-    });
-  });
-
   describe('_sort', () => {
     it('dispatchea sort-change con direction asc cuando es primer sort', () => {
       const element = new FvGrid();

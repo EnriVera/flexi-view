@@ -53,7 +53,7 @@ export class FvCards<T = Record<string, unknown>> extends LitElement {
 
   updated(changed: Map<string, unknown>) {
     if (changed.has('columns')) {
-      this.columns.forEach(col => resolveControl(col.control));
+      this.columns.forEach(col => resolveControl(col.control || 'fv-text'));
     }
   }
 
@@ -83,12 +83,13 @@ export class FvCards<T = Record<string, unknown>> extends LitElement {
     
     let displayValue = String(value ?? '');
     
-    if (col.control === 'dv-date' && value) {
+    const control = col.control || 'fv-text';
+    if (control === 'fv-date' && value) {
       const date = new Date(value as string);
       if (!isNaN(date.getTime())) {
         displayValue = date.toLocaleDateString();
       }
-    } else if (col.control === 'dv-number' && value != null) {
+    } else if (control === 'fv-number' && value != null) {
       displayValue = Number(value).toLocaleString();
     }
     
