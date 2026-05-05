@@ -20,15 +20,14 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
   
   @property({ reflect: true, type: String }) view: View = 'grid';
   @property({ attribute: 'storage-key' }) storageKey?: string;
+  @property({ type: Boolean, attribute: 'sync-url' }) syncUrl = false;
   
-  // showSwitcher como property con converter - maneja React boolean
-  @property({ converter: (value) => {
-    if (value === true || value === 'true' || value === '') return true;
-    if (value === false || value === 'false') return false;
-    return value;
-  }}) showSwitcher = true;
+  // showSwitcher como property - maneja React boolean y string
+  @property({ type: Boolean }) showSwitcher = true;
 
   @state() private _activeView: View = 'grid';
+  private _hashListener?: () => void;
+  private _initialized = false;
   @state() private _filters: Record<string, unknown> = {};
   @state() private _sortConfig: SortChangeDetail | null = null;
 
@@ -63,11 +62,10 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
   get columns(): ColumnConfig<T>[] { return this._columns; }
 
   willUpdate(changedProperties: Map<string, unknown>) {
-    // Sincronizar view attribute con _activeView
-    if (changedProperties.has('view')) {
-      const attrView = this.getAttribute('view') as View;
-      if (attrView && ['grid', 'list', 'cards'].includes(attrView)) {
-        this._activeView = attrView;
+    // Solo sincronizar después de inicializado (evitar que attribute sobreescriba URL)
+    if (this._initialized && changedProperties.has('view') && this.view) {
+      if (['grid', 'list', 'cards'].includes(this.view)) {
+        this._activeView = this.view;
       }
     }
   }
@@ -90,7 +88,26 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
   };
 
   private _onViewChange = (e: Event) => {
-    this._activeView = (e as CustomEvent<{ view: View }>).detail.view;
+    // Solo procesar eventos de data-switch con attribute 'for' (external)
+    // que nos targetea directamente
+    const target = e.composedPath()[0] as HTMLElement;
+    if (!target || target.tagName?.toLowerCase() !== 'data-switch') return;
+    
+    // Solo procesar si este switcher nos tiene como target
+    const forAttr = target.getAttribute('for');
+    if (forAttr && forAttr !== this.id) return;
+    
+    const event = e as CustomEvent<{ view: View }>;
+    const newView = event.detail.view;
+    
+    // Sincronizar AMBOS: property y state
+    this.view = newView;
+    this._activeView = newView;
+    
+    if (this.syncUrl) {
+      this._updateUrl(newView);
+    }
+    
     writeState(this.storageKey, this._persistPayload);
   };
 
@@ -102,28 +119,83 @@ export class DataView<T = Record<string, unknown>> extends LitElement {
     };
   }
 
+  private _onHashChange = () => {
+    if (!this.syncUrl) return;
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    const urlView = params.get('view');
+    if (urlView && ['grid', 'list', 'cards'].includes(urlView) && urlView !== this._activeView) {
+      this._activeView = urlView as View;
+      this.view = urlView as View;
+      this.requestUpdate();
+    }
+  };
+
   connectedCallback() {
     super.connectedCallback();
     
-    // view desde attribute inicial
-    const attrView = this.getAttribute('view');
-    if (attrView && ['grid', 'list', 'cards'].includes(attrView)) {
-      this._activeView = attrView as View;
+    // PRIORIDAD: URL > localStorage > attribute > default
+    const urlView = this.syncUrl ? this._getUrlView() : null;
+    
+    if (urlView) {
+      this._activeView = urlView;
+    } else {
+      // Solo si NO hay URL, usar localStorage o attribute
+      const saved = readState(this.storageKey);
+      if (saved?.activeView) {
+        this._activeView = saved.activeView as View;
+      } else {
+        // Fallback al attribute o default
+        const attrView = this.getAttribute('view');
+        if (attrView && ['grid', 'list', 'cards'].includes(attrView)) {
+          this._activeView = attrView as View;
+        }
+        if (saved) {
+          if (saved.filters) this._filters = saved.filters;
+          if (saved.sortConfig !== undefined) this._sortConfig = saved.sortConfig ?? null;
+        }
+      }
     }
     
-    const saved = readState(this.storageKey);
-    if (saved) {
-      if (saved.activeView) this._activeView = saved.activeView as View;
-      if (saved.filters) this._filters = saved.filters;
-      if (saved.sortConfig !== undefined) this._sortConfig = saved.sortConfig ?? null;
+    // Actualizar URL para que esté sincronizada con el estado inicial
+    if (this.syncUrl && !urlView) {
+      this._updateUrl(this._activeView);
     }
+    
     this.addEventListener('sort-change', this._onSortChange);
     this.addEventListener('filter-change', this._onFilterChange);
     this.addEventListener('view-change', this._onViewChange);
+    
+    if (this.syncUrl) {
+      this._hashListener = () => this._onHashChange();
+      window.addEventListener('hashchange', this._hashListener);
+    }
+    
+    this._initialized = true;
+  }
+  
+  private _getUrlView(): View | null {
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    const view = params.get('view');
+    if (view && ['grid', 'list', 'cards'].includes(view)) {
+      return view as View;
+    }
+    return null;
+  }
+  
+  private _updateUrl(view: View) {
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    params.set('view', view);
+    window.location.hash = params.toString();
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    if (this._hashListener) {
+      window.removeEventListener('hashchange', this._hashListener);
+    }
     this.removeEventListener('sort-change', this._onSortChange);
     this.removeEventListener('filter-change', this._onFilterChange);
     this.removeEventListener('view-change', this._onViewChange);
