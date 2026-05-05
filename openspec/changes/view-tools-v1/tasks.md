@@ -2,11 +2,11 @@
 
 ## Phase 1: Foundation
 
-- [ ] 1.1 Create `package.json` — name: `view-tools`, deps: `lit`. devDeps: `vite`, `typescript`, `vitest`, `@web/test-runner`, `playwright`, `size-limit`
-- [ ] 1.2 Create `tsconfig.json` — strict mode, experimentalDecorators, useDefineForClassFields, target ES2020
-- [ ] 1.3 Create `vite.config.ts` — library mode, entry: `src/index.ts`, formats: `['es', 'umd']`, outDir: `dist`
-- [ ] 1.4 Create `src/types.ts` — `ColumnConfig<T>`, `DataViewOptions`, `SortChangeDetail`, `FilterChangeDetail`, `RowClickDetail<T>`, `PersistMode` union
-- [ ] 1.5 Update `.gitignore` — add `dist/`, `node_modules/`, `.wtr/`
+- [x] 1.1 Create `package.json` — name: `view-tools`, deps: `lit`. devDeps: `vite`, `typescript`, `vitest`, `@web/test-runner`, `playwright`, `size-limit`
+- [x] 1.2 Create `tsconfig.json` — strict mode, experimentalDecorators, useDefineForClassFields, target ES2020
+- [x] 1.3 Create `vite.config.ts` — library mode, entry: `src/index.ts`, formats: `['es', 'umd']`, outDir: `dist`
+- [x] 1.4 Create `src/types.ts` — `ColumnConfig<T>`, `DataViewOptions`, `SortChangeDetail`, `FilterChangeDetail`, `RowClickDetail<T>`, `PersistMode` union
+- [x] 1.5 Update `.gitignore` — add `dist/`, `node_modules/`, `.wtr/`
 
 ## Phase 2: Built-in Controls
 

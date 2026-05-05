@@ -1,0 +1,34 @@
+{
+  "name": "view-tools",
+  "version": "0.0.1",
+  "description": "Framework-agnostic multi-view data library built with Web Components",
+  "type": "module",
+  "main": "dist/view-tools.umd.js",
+  "module": "dist/view-tools.es.js",
+  "types": "src/index.d.ts",
+  "files": ["dist", "src/index.d.ts"],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:wtr": "wtr",
+    "test:e2e": "playwright test",
+    "size": "size-limit"
+  },
+  "dependencies": {
+    "lit": "^3.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "@web/test-runner": "^0.18.0",
+    "@web/test-runner-playwright": "^0.11.0",
+    "@esm-bundle/chai": "^4.3.4",
+    "playwright": "^1.40.0",
+    "@playwright/test": "^1.40.0",
+    "size-limit": "^11.0.0",
+    "@size-limit/preset-small-lib": "^11.0.0"
+  }
+}
