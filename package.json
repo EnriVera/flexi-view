@@ -10,6 +10,32 @@
     "dist",
     "src/index.d.ts"
   ],
+  "exports": {
+    ".": {
+      "import": "./dist/flexi-view.es.js",
+      "types": "./src/index.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EnriVera/flexi-view.git"
+  },
+  "homepage": "https://github.com/EnriVera/flexi-view#readme",
+  "keywords": [
+    "web-components",
+    "lit",
+    "data-grid",
+    "table",
+    "dataview",
+    "cards",
+    "list-view"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/EnriVera/flexi-view/issues"
+  },
   "scripts": {
     "dev": "vite",
     "prebuild": "vitest run",
@@ -18,7 +44,8 @@
     "test:watch": "vitest",
     "test:wtr": "wtr",
     "test:e2e": "playwright test",
-    "size": "size-limit"
+    "size": "size-limit",
+    "publish": "npm run build && npm publish --access public"
   },
   "dependencies": {
     "lit": "^3.0.0"
