@@ -1,4 +1,35 @@
-.claude/settings.local.json
-dist/
+# Dependencies
 node_modules/
+
+# Build output
+dist/
+
+# Test runner
 .wtr/
+
+# Claude settings
+.claude/settings.local.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment
+.env
+.env.local
+
+# Temp
+*.tmp
+*.temp
+tmp/
+temp/

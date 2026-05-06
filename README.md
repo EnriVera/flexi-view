@@ -2,6 +2,17 @@
 
 Framework-agnostic multi-view data library built with Web Components (Lit + Shadow DOM).
 
+## Features
+
+- **Multiple views**: Grid, List, and Cards layouts
+- **Sorting & Filtering**: Column-based with modal filter selection
+- **Export**: CSV and XLSX (via SheetJS)
+- **Persistence**: localStorage or sessionStorage
+- **URL Sync**: State reflected in URL hash
+- **i18n**: English and Spanish translations
+- **Theming**: Custom CSS variables for colors, borders, radius
+- **Dark Mode**: Light, dark, or auto (system preference)
+
 ## Installation
 
 ```bash
@@ -22,6 +33,27 @@ npm install flexi-view
     { title: 'Age',  field: 'age',  sortable: true, exportable: true },
   ];
 </script>
+```
+
+## Configuration
+
+```ts
+import { FlexiView } from 'flexi-view';
+
+// Global configuration
+FlexiView.configure({
+  language: 'es',     // 'en' | 'es' (default: 'en')
+  darkMode: 'auto',   // 'light' | 'dark' | 'auto' (default: 'light')
+  theme: {
+    primary: '#1976d2',
+    accent: '#111',
+    radius: '6px',
+  },
+  icons: {
+    sortAsc: '<svg>...</svg>',
+    // custom icons...
+  },
+});
 ```
 
 ## Components
@@ -125,4 +157,41 @@ All action components work independently outside `fv-view`:
 <fv-sort-action field="name" direction="asc"></fv-sort-action>
 <fv-filter-action field="name"></fv-filter-action>
 <fv-export-action format="csv" filename="export"></fv-export-action>
+```
+
+## Internationalization (i18n)
+
+FlexiView supports English (`en`) and Spanish (`es`) out of the box.
+
+```ts
+FlexiView.configure({ language: 'es' });
+```
+
+Translated strings:
+- Sort labels (Ascending/Descending)
+- View switcher tooltip
+- Filter modal (Filter, Clear, Apply, "No values available")
+- Header menu actions
+
+## Theming
+
+Customize via CSS variables:
+
+```css
+:root {
+  --fv-bg: #ffffff;
+  --fv-text: #333333;
+  --fv-primary: #1976d2;
+  --fv-border: #e0e0e0;
+  --fv-radius: 6px;
+  --fv-font-size: 13px;
+}
+```
+
+Or via `FlexiView.configure({ theme: {...} })`.
+
+## Dark Mode
+
+```ts
+FlexiView.configure({ darkMode: 'dark' });  // or 'auto' or 'light'
 ```
