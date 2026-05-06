@@ -17,6 +17,8 @@ export interface DataViewOptions<T = Record<string, unknown>> {
 
 export type ExportFormat = 'csv' | 'xlsx';
 
+export type Language = 'es' | 'en';
+
 export type SortChangeDetail = { field: string; direction: 'asc' | 'desc' | null };
 export type FilterChangeDetail = { field: string; value: unknown };
 export type RowClickDetail<T> = { item: T; index: number };
@@ -42,16 +44,19 @@ export interface HeaderMenuElement<T = Record<string, unknown>> {
 
 export type DarkMode = 'light' | 'dark' | 'auto';
 
+// Icon value type: can be SVG string (existing), React component, or render function
+export type FlexiViewIconValue = string | ((props?: Record<string, unknown>) => HTMLElement);
+
 export interface FlexiViewIcons {
-  sortAsc?: string;
-  sortDesc?: string;
-  filter?: string;
-  clearFilter?: string;
-  close?: string;
-  export?: string;
-  gridView?: string;
-  listView?: string;
-  cardsView?: string;
+  sortAsc?: FlexiViewIconValue;
+  sortDesc?: FlexiViewIconValue;
+  filter?: FlexiViewIconValue;
+  clearFilter?: FlexiViewIconValue;
+  close?: FlexiViewIconValue;
+  export?: FlexiViewIconValue;
+  gridView?: FlexiViewIconValue;
+  listView?: FlexiViewIconValue;
+  cardsView?: FlexiViewIconValue;
 }
 
 export interface FlexiViewTheme {
@@ -70,6 +75,7 @@ export interface FlexiViewTheme {
 }
 
 export interface FlexiViewConfig {
+  language?: Language;
   icons?: FlexiViewIcons;
   theme?: Partial<FlexiViewTheme>;
   darkMode?: DarkMode;

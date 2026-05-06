@@ -3,6 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import type { FilterChangeDetail } from '../types.js';
 import { subscribeConfig, getFlexiConfig } from '../registry.js';
+import { t } from '../i18n/index.js';
 
 @customElement('fv-filter-modal')
 export class FvFilterModal extends LitElement {
@@ -171,16 +172,17 @@ export class FvFilterModal extends LitElement {
 
     const icons = getFlexiConfig().icons;
 
+    const i18n = t();
     return html`
       <div class="backdrop" @click=${this._onBackdropClick}>
         <div class="modal" @click=${(e: Event) => e.stopPropagation()}>
           <div class="header">
-            <span>Filtro: ${this.field}</span>
-            <button class="close-btn" @click=${this._close}>${unsafeHTML(icons.close)}</button>
+            <span>${i18n.filter.title}: ${this.field}</span>
+            <button class="close-btn" @click=${this._close}>${unsafeHTML(icons.close || '<span>✕</span>')}</button>
           </div>
           <div class="options">
             ${this.options.length === 0
-              ? html`<p class="empty">No hay valores disponibles</p>`
+              ? html`<p class="empty">${i18n.filter.noValues}</p>`
               : this.options.map(opt => html`
                   <label class="option">
                     <input
@@ -193,8 +195,8 @@ export class FvFilterModal extends LitElement {
                 `)}
           </div>
           <div class="footer">
-            <button class="btn" @click=${this._onClear}>Limpiar</button>
-            <button class="btn btn-primary" @click=${this._onApply}>Aplicar</button>
+            <button class="btn" @click=${this._onClear}>${i18n.filter.clear}</button>
+            <button class="btn btn-primary" @click=${this._onApply}>${i18n.filter.apply}</button>
           </div>
         </div>
       </div>

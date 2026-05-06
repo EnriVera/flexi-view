@@ -3,6 +3,7 @@ import { customElement, property, state } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import type { ColumnConfig, SortChangeDetail, FilterChangeDetail, HeaderMenuElement } from '../types.js';
 import { subscribeConfig, getFlexiConfig } from '../registry.js';
+import { t } from '../i18n/index.js';
 import './fv-sort-action.js';
 import './fv-filter-action.js';
 import './fv-filter-modal.js';
@@ -182,12 +183,12 @@ static styles = css`
         </div>
         <div class="menu-section">
           <button class="see-all-btn" @click=${this._openFilterModal}>
-            Filtrar...
+            ${t().filter.title}...
           </button>
           ${currentSelected.length > 0 ? html`
             <button class="see-all-btn clear-btn" @click=${this._clearFilter}>
-              ${unsafeHTML(icons.clearFilter)}
-              Eliminar filtro
+              ${unsafeHTML(icons.clearFilter || '<span>✕</span>')}
+              ${t().filter.clear} ${t().filter.title}
             </button>
           ` : ''}
         </div>

@@ -24,6 +24,7 @@ import {
   _buildStylesheet,
   LIGHT_TOKENS,
   DARK_TOKENS,
+  normalizeIcon,
 } from '../../registry.js';
 
 describe('configureGrid', () => {
@@ -237,5 +238,39 @@ describe('_resetRegistryForTesting', () => {
 
     _resetRegistryForTesting();
     expect(document.adoptedStyleSheets.length).toBe(0);
+  });
+});
+
+describe('normalizeIcon', () => {
+  beforeEach(() => {
+    _resetRegistryForTesting();
+  });
+
+  it('returns empty string for undefined input', () => {
+    expect(normalizeIcon(undefined)).toBe('');
+  });
+
+  it('returns empty string for null input', () => {
+    // @ts-expect-error - testing null case
+    expect(normalizeIcon(null)).toBe('');
+  });
+
+  it('passes through SVG string unchanged', () => {
+    const svg = '<svg>...</svg>';
+    expect(normalizeIcon(svg)).toBe(svg);
+  });
+
+  it('calls render function and returns outerHTML', () => {
+    const renderFn = () => {
+      const el = document.createElement('div');
+      el.innerHTML = '<span>custom</span>';
+      return el;
+    };
+    expect(normalizeIcon(renderFn)).toBe('<div><span>custom</span></div>');
+  });
+
+  it('returns empty string for invalid icon type', () => {
+    // @ts-expect-error - testing invalid type
+    expect(normalizeIcon(123)).toBe('');
   });
 });

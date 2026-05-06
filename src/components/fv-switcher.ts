@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { subscribeConfig, getFlexiConfig } from '../registry.js';
+import { t } from '../i18n/index.js';
 
 const VIEWS = ['grid', 'list', 'cards'] as const;
 type View = typeof VIEWS[number];
@@ -127,7 +128,7 @@ export class FvSwitcher extends LitElement {
       <button
         class="active"
         @click=${this._cycle}
-        title="Cambiar vista"
+        title=${t().view.switch}
       >
         ${unsafeHTML(iconMap[this.activeView])}
       </button>

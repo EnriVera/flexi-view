@@ -1,5 +1,21 @@
 import { ColumnConfig } from './types'
 
+// Type exports
+export type { ColumnConfig } from './types';
+export type { DataViewOptions } from './types';
+export type { SortChangeDetail } from './types';
+export type { FilterChangeDetail } from './types';
+export type { RowClickDetail } from './types';
+export type { PersistMode } from './types';
+export type { ExportFormat } from './types';
+export type { ExportRequestDetail } from './types';
+export type { HeaderMenuElement } from './types';
+export type { FlexiViewConfig } from './types';
+export type { FlexiViewIcons } from './types';
+export type { FlexiViewTheme } from './types';
+export type { DarkMode } from './types';
+export type { Language } from './types';
+
 // JSX types para React - se incluyen automáticamente
 declare module 'react' {
   namespace JSX {

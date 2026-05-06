@@ -1,7 +1,22 @@
-import type { ExportFormat, FlexiViewConfig, FlexiViewIcons, FlexiViewTheme, DarkMode } from './types.js';
+import type { ExportFormat, FlexiViewConfig, FlexiViewIcons, FlexiViewTheme, DarkMode, FlexiViewIconValue, Language } from './types.js';
 
 type ControlLoader = () => Promise<unknown>;
 type ExcelLibrary = unknown;
+
+// Normalize icon value to HTML string for rendering
+export function normalizeIcon(icon: FlexiViewIconValue | undefined): string {
+  if (icon == null) return '';
+  if (typeof icon === 'string') return icon;
+  if (typeof icon === 'function') {
+    const el = icon();
+    if (el instanceof HTMLElement) {
+      return el.outerHTML;
+    }
+    return '';
+  }
+  // Invalid type - return empty
+  return '';
+}
 
 const registry = new Map<string, ControlLoader>();
 
@@ -133,8 +148,9 @@ function _notifySubscribers(): void {
 }
 
 export function configure(config: FlexiViewConfig): void {
-  // Deep-merge icons and theme; replace darkMode
+  // Deep-merge icons, theme, and language; replace darkMode
   _flexiConfig = {
+    language: config.language ?? _flexiConfig.language,
     darkMode: config.darkMode ?? _flexiConfig.darkMode,
     icons: { ..._flexiConfig.icons, ...config.icons },
     theme: { ..._flexiConfig.theme, ...config.theme },
@@ -160,14 +176,40 @@ export function subscribeConfig(cb: () => void): () => void {
 }
 
 export function getFlexiConfig(): {
-  icons: Required<FlexiViewIcons>;
+  language: Language;
+  icons: {
+    sortAsc: string;
+    sortDesc: string;
+    filter: string;
+    clearFilter: string;
+    close: string;
+    export: string;
+    gridView: string;
+    listView: string;
+    cardsView: string;
+  };
   theme: Required<FlexiViewTheme>;
   darkMode: DarkMode;
 } {
+  const language: Language = _flexiConfig.language ?? 'en';
   const darkMode: DarkMode = _flexiConfig.darkMode ?? 'light';
   const baseTokens = darkMode === 'dark' ? DARK_TOKENS : LIGHT_TOKENS;
+  const mergedIcons = { ...DEFAULT_ICONS, ..._flexiConfig.icons };
+  // Normalize all icons to HTML strings for safe rendering
+  const normalizedIcons: Required<FlexiViewIcons> = {
+    sortAsc: normalizeIcon(mergedIcons.sortAsc),
+    sortDesc: normalizeIcon(mergedIcons.sortDesc),
+    filter: normalizeIcon(mergedIcons.filter),
+    clearFilter: normalizeIcon(mergedIcons.clearFilter),
+    close: normalizeIcon(mergedIcons.close),
+    export: normalizeIcon(mergedIcons.export),
+    gridView: normalizeIcon(mergedIcons.gridView),
+    listView: normalizeIcon(mergedIcons.listView),
+    cardsView: normalizeIcon(mergedIcons.cardsView),
+  };
   return {
-    icons: { ...DEFAULT_ICONS, ..._flexiConfig.icons },
+    language,
+    icons: normalizedIcons,
     theme: { ...baseTokens, ..._flexiConfig.theme },
     darkMode,
   };

@@ -48,7 +48,7 @@ export class FvExportAction extends LitElement {
     const label = this.format === 'csv' ? 'Export CSV' : 'Export XLSX';
     return html`
       <button @click=${this._onClick}>
-        ${unsafeHTML(icons.export)}
+        ${unsafeHTML(icons.export || '<span>↓</span>')}
         ${label}
       </button>
     `;

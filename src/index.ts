@@ -12,6 +12,7 @@ export type {
   FlexiViewIcons,
   FlexiViewTheme,
   DarkMode,
+  Language,
 } from './types.js';
 export { configureGrid, getGridConfig, configure, subscribeConfig, getFlexiConfig } from './registry.js';
 

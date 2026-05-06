@@ -11,31 +11,28 @@ export class FvGrid<T = Record<string, unknown>> extends LitElement {
       width: 100%;
       border-collapse: collapse;
       font-size: 13px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--fv-bg, #fff);
     }
     th {
-      background: var(--fv-header-bg, #fafafa);
-      border-bottom: 2px solid var(--fv-border, #f0f0f0);
-      padding: 12px 16px;
+      background: var(--fv-header-bg, transparent);
+      border-bottom: 1px solid var(--fv-border, #e5e7eb);
+      padding: 10px 12px;
       text-align: left;
-      font-weight: 600;
+      font-weight: 500;
       font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #666;
+      color: var(--fv-header-text, #6b7280);
       position: relative;
     }
-    th.sorted { color: #111; }
+    th.sorted { color: var(--fv-text, #111); }
     .fv-header-trigger {
       background: none;
       border: none;
       cursor: pointer;
       padding: 0;
       font: inherit;
-      font-weight: 600;
+      font-weight: 500;
       font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
       color: inherit;
       display: flex;
       align-items: center;
@@ -43,26 +40,26 @@ export class FvGrid<T = Record<string, unknown>> extends LitElement {
       gap: 4px;
       width: 100%;
     }
-    .fv-header-trigger:hover { color: #111; }
+    .fv-header-trigger:hover { color: var(--fv-text, #111); }
     .header-indicators {
       display: flex;
       align-items: center;
       gap: 4px;
     }
     .sort-indicator {
-      font-size: 12px;
-      color: #666;
+      font-size: 11px;
+      color: var(--fv-primary, #6366f1);
     }
     .filter-indicator {
-      color: #1976d2;
+      color: var(--fv-primary, #6366f1);
       font-size: 10px;
     }
     td {
-      border-bottom: 1px solid var(--fv-border, #f5f5f5);
-      padding: 12px 16px;
-      color: #333;
+      border-bottom: 1px solid var(--fv-border, #f3f4f6);
+      padding: 10px 12px;
+      color: var(--fv-text, #374151);
     }
-    tr:hover td { background: var(--fv-row-hover, #fafafa); }
+    tr:hover td { background: var(--fv-row-hover, #f9fafb); }
   `;
 
   @property({ attribute: false }) data: T[] = [];

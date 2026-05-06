@@ -3,6 +3,7 @@ import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import type { SortChangeDetail } from '../types.js';
 import { subscribeConfig, getFlexiConfig } from '../registry.js';
+import { t } from '../i18n/index.js';
 
 @customElement('fv-sort-action')
 export class FvSortAction extends LitElement {
@@ -17,9 +18,13 @@ export class FvSortAction extends LitElement {
       font-size: 12px;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 6px;
       width: 100%;
       color: var(--fv-text, #333);
+    }
+    .label {
+      font-size: 12px;
+      font-weight: 500;
     }
     button[aria-pressed='true'] {
       background: var(--fv-accent, #111);
@@ -49,12 +54,16 @@ export class FvSortAction extends LitElement {
   render() {
     const icons = getFlexiConfig().icons;
     const icon = this.direction === 'asc' ? icons.sortAsc : icons.sortDesc;
+    const safeIcon = icon || '<span>↕</span>';
+    const label = this.direction === 'asc' ? t().sort.asc : t().sort.desc;
     return html`
       <button
         aria-pressed=${String(this.active)}
+        title=${label}
         @click=${this._onClick}
       >
-        ${unsafeHTML(icon)}
+        ${unsafeHTML(safeIcon)}
+        <span class="label">${label}</span>
       </button>
     `;
   }

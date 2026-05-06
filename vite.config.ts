@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { transform } from 'esbuild';
 
 export default defineConfig({
   build: {
@@ -11,12 +10,13 @@ export default defineConfig({
       fileName: (format) => `flexi-view.${format}.js`,
     },
     rollupOptions: {
-      external: ['lit'],
-      output: {
-        globals: { lit: 'Lit' },
-      },
+      // Do NOT externalize lit - bundle it to avoid version conflicts
+      // Previously externalized, but that caused "directive not a function" errors
+      // when used with bundlers like Vite that have their own lit version
     },
     outDir: 'dist',
+    // Prevent side effects from being tree-shaken
+    sideEffects: ['lit'],
   },
   test: {
     environment: 'jsdom',
