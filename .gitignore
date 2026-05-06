@@ -33,3 +33,4 @@ npm-debug.log*
 *.temp
 tmp/
 temp/
+package-lock.json
