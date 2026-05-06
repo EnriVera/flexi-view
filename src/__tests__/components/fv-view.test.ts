@@ -49,38 +49,38 @@ describe('FvView', () => {
   });
 
   describe('_persistPayload', () => {
-    it('genera payload correcto con view, order y filter', () => {
+    it('genera payload correcto con view, sort y filter', () => {
       const element = new FvView();
       (element as any)._activeView = 'list';
       (element as any)._filters = { name: 'Alice' };
       (element as any)._sortConfig = { field: 'name', direction: 'asc' };
-      
+
       const payload = (element as any)._persistPayload;
-      
+
       expect(payload.views).toBe('list');
-      expect(payload.order).toBe('as'); // asc -> as
+      expect(payload.sort).toEqual({ field: 'name', direction: 'asc' });
       expect(payload.filter).toEqual([{ field: 'name', value: 'Alice' }]);
     });
 
-    it('genera payload sin order cuando no hay sortConfig', () => {
+    it('genera payload con sort null cuando no hay sortConfig', () => {
       const element = new FvView();
       (element as any)._activeView = 'grid';
       (element as any)._filters = {};
       (element as any)._sortConfig = null;
-      
+
       const payload = (element as any)._persistPayload;
-      
-      expect(payload.order).toBeNull();
+
+      expect(payload.sort).toBeNull();
     });
 
-    it('convierte desc a des', () => {
+    it('serializa direction desc correctamente', () => {
       const element = new FvView();
       (element as any)._activeView = 'cards';
       (element as any)._sortConfig = { field: 'name', direction: 'desc' };
-      
+
       const payload = (element as any)._persistPayload;
-      
-      expect(payload.order).toBe('des');
+
+      expect(payload.sort).toEqual({ field: 'name', direction: 'desc' });
     });
 
     it('convierte filtros a formato de array', () => {

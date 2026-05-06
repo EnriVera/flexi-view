@@ -11,74 +11,85 @@ describe('FvGrid', () => {
     });
   });
 
-  describe('_sort', () => {
-    it('dispatchea sort-change con direction asc cuando es primer sort', () => {
-      const element = new FvGrid();
-      const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
-      (element as any).columns = [{ field: 'name', title: 'Name', sortable: true }];
-      
-      const col = (element as any).columns[0];
-      (element as any)._sort(col);
-      
-      expect(dispatchSpy).toHaveBeenCalled();
-      const event = dispatchSpy.mock.calls[0][0] as CustomEvent;
-      expect(event.type).toBe('sort-change');
+  describe('stateless props', () => {
+    it('accepts currentSort as a prop without error', () => {
+      const el = new FvGrid();
+      expect(() => {
+        el.currentSort = { field: 'name', direction: 'asc' };
+      }).not.toThrow();
+      expect(el.currentSort?.field).toBe('name');
+    });
+
+    it('accepts currentFilters as a prop without error', () => {
+      const el = new FvGrid();
+      expect(() => {
+        el.currentFilters = { name: 'Alice' };
+      }).not.toThrow();
+      expect(el.currentFilters.name).toBe('Alice');
+    });
+
+    it('does not have _sortField or _sortDir internal state', () => {
+      const el = new FvGrid();
+      expect((el as any)._sortField).toBeUndefined();
+      expect((el as any)._sortDir).toBeUndefined();
+    });
+
+    it('currentSort defaults to null', () => {
+      const el = new FvGrid();
+      expect(el.currentSort).toBeNull();
+    });
+  });
+
+  describe('header-menu-open event', () => {
+    it('dispatches header-menu-open when _onHeaderClick is called', () => {
+      const el = new FvGrid();
+      const spy = vi.spyOn(el, 'dispatchEvent');
+      const col = { field: 'name', title: 'Name', sortable: true };
+
+      (el as any)._onHeaderClick(col);
+
+      expect(spy).toHaveBeenCalledOnce();
+      const event = spy.mock.calls[0][0] as CustomEvent;
+      expect(event.type).toBe('header-menu-open');
+      expect(event.detail.column).toEqual(col);
       expect(event.detail.field).toBe('name');
-      expect(event.detail.direction).toBe('asc');
     });
 
-    it('toggle direction a desc en segundo click', () => {
-      const element = new FvGrid();
-      const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
-      (element as any)._sortField = 'name';
-      (element as any)._sortDir = 'asc';
-      (element as any).columns = [{ field: 'name', title: 'Name', sortable: true }];
-      
-      const col = (element as any).columns[0];
-      (element as any)._sort(col);
-      
-      expect((element as any)._sortDir).toBe('desc');
-    });
+    it('header-menu-open event bubbles and is composed', () => {
+      const el = new FvGrid();
+      const spy = vi.spyOn(el, 'dispatchEvent');
+      const col = { field: 'age', title: 'Age' };
 
-    it('resetea a asc cuando cambia de campo', () => {
-      const element = new FvGrid();
-      (element as any)._sortField = 'name';
-      (element as any)._sortDir = 'desc';
-      (element as any).columns = [{ field: 'age', title: 'Age', sortable: true }];
-      
-      const col = (element as any).columns[0];
-      (element as any)._sort(col);
-      
-      expect((element as any)._sortField).toBe('age');
-      expect((element as any)._sortDir).toBe('asc');
+      (el as any)._onHeaderClick(col);
+
+      const event = spy.mock.calls[0][0] as CustomEvent;
+      expect(event.bubbles).toBe(true);
+      expect(event.composed).toBe(true);
     });
   });
 
   describe('_emitFilter', () => {
-    it('dispatchea filter-change con el valor', () => {
-      const element = new FvGrid();
-      const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
-      
-      (element as any)._emitFilter({ field: 'name', title: 'Name' }, 'Alice');
-      
-      expect(dispatchSpy).toHaveBeenCalled();
-      const event = dispatchSpy.mock.calls[0][0] as CustomEvent;
+    it('dispatches filter-change with the value', () => {
+      const el = new FvGrid();
+      const spy = vi.spyOn(el, 'dispatchEvent');
+
+      (el as any)._emitFilter({ field: 'name', title: 'Name' }, 'Alice');
+
+      expect(spy).toHaveBeenCalled();
+      const event = spy.mock.calls[0][0] as CustomEvent;
       expect(event.type).toBe('filter-change');
       expect(event.detail.field).toBe('name');
       expect(event.detail.value).toBe('Alice');
     });
 
-    it('usa title como field cuando field es undefined', () => {
-      const element = new FvGrid();
-      const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
-      
-      (element as any)._emitFilter({ field: undefined, title: 'Name' }, 'test');
-      
-      const event = dispatchSpy.mock.calls[0][0] as CustomEvent;
+    it('uses title as field when field is undefined', () => {
+      const el = new FvGrid();
+      const spy = vi.spyOn(el, 'dispatchEvent');
+
+      (el as any)._emitFilter({ field: undefined, title: 'Name' }, 'test');
+
+      const event = spy.mock.calls[0][0] as CustomEvent;
       expect(event.detail.field).toBe('Name');
     });
   });
-
-  // Los tests de _renderCell requieren lifecycle completo de Lit
-  // Se跳过an por ahora - cubiertos por tests de integración E2E
 });

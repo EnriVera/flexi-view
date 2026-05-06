@@ -26,10 +26,10 @@ const data: Employee[] = [
 ];
 
 const columns: ColumnConfig<Employee>[] = [
-  { control: 'fv-text', field: 'name', title: 'Name', sortable: true, filterable: true },
-  { control: 'fv-text', field: 'department', title: 'Department', sortable: true, filterable: true },
-  { control: 'fv-number', field: 'salary', title: 'Salary', sortable: true },
-  { control: 'fv-date', field: 'startDate', title: 'Start Date', sortable: true },
+  { control: 'fv-text', field: 'name', title: 'Name' },
+  { control: 'fv-text', field: 'department', title: 'Department' },
+  { control: 'fv-number', field: 'salary', title: 'Salary' },
+  { control: 'fv-date', field: 'startDate', title: 'Start Date' },
   {
     control: 'fv-badge',
     field: 'status',

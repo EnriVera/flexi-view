@@ -1,12 +1,12 @@
 schema: spec-driven
 
 context: |
-  Tech stack: Web Components + Lit ~5KB + Shadow DOM + TypeScript
+  Tech stack: Web Components + Lit ^3.0.0 + Shadow DOM + TypeScript ^5.0.0
   Architecture: npm library, framework-agnostic, <data-view> wrapper + sub-views
-  Testing: TBD — planned Vitest + Playwright (project is empty, no package.json yet)
+  Testing: Vitest ^1.0.0 (unit) + Playwright ^1.40.0 (e2e)
   Style: CSS Custom Properties (--dv-*) + ::part() for theming
 
-strict_tdd: false
+strict_tdd: true
 
 rules:
   proposal:
@@ -24,20 +24,24 @@ rules:
     - Keep tasks small enough to complete in one session
   apply:
     - Follow existing code patterns and conventions
-    tdd: false
-    test_command: ""
+    - Test-driven: write failing test first, then implement
+    tdd: true
+    test_command: "npm test"
   verify:
-    test_command: ""
-    build_command: ""
-    coverage_threshold: 0
+    - Run tests to verify implementation matches specs
+    - Cover unit tests for logic, E2E for integration
+    test_command: "npm test"
+    build_command: "npm run build"
+    coverage_threshold: 80
   archive:
     - Warn before merging destructive deltas (large removals)
 
 testing:
-  strict_tdd: false
-  test_runner: NOT DETECTED
-  unit: false
+  strict_tdd: true
+  test_runner: vitest
+  test_command: npm test
+  unit: true
   integration: false
-  e2e: false
-  coverage: false
-  note: "Project is empty. Re-run sdd-init after package.json is created."
+  e2e: true
+  coverage: true
+  note: "Unit and E2E available. Integration layer not configured."

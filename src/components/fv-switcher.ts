@@ -1,14 +1,10 @@
-import { LitElement, html, css, svg } from 'lit';
+import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { unsafeHTML } from 'lit/directives/unsafe-html.js';
+import { subscribeConfig, getFlexiConfig } from '../registry.js';
 
 const VIEWS = ['grid', 'list', 'cards'] as const;
 type View = typeof VIEWS[number];
-
-const ICONS = {
-  grid: svg`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>`,
-  list: svg`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
-  cards: svg`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>`,
-};
 
 @customElement('fv-switcher')
 export class FvSwitcher extends LitElement {
@@ -20,19 +16,19 @@ export class FvSwitcher extends LitElement {
       justify-content: center;
       padding: 8px;
       border: none;
-      background: #f5f5f5;
+      background: var(--fv-row-hover, #f5f5f5);
       cursor: pointer;
       border-radius: 6px;
-      color: #666;
+      color: var(--fv-text-muted, #666);
       transition: all 0.15s ease;
     }
     button:hover {
-      background: #eee;
-      color: #333;
+      background: var(--fv-border, #e0e0e0);
+      color: var(--fv-text, #333);
     }
     button.active {
-      background: #fff;
-      color: #111;
+      background: var(--fv-bg, #fff);
+      color: var(--fv-accent, #111);
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
   `;
@@ -42,6 +38,20 @@ export class FvSwitcher extends LitElement {
   @property({ type: Boolean, attribute: 'sync-url' }) syncUrl = false;
 
   private _hashListener?: () => void;
+  private _unsubscribeConfig?: () => void;
+
+  connectedCallback() {
+    super.connectedCallback();
+    this._unsubscribeConfig = subscribeConfig(() => this.requestUpdate());
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    this._unsubscribeConfig?.();
+    if (this._hashListener) {
+      window.removeEventListener('hashchange', this._hashListener);
+    }
+  }
 
   firstUpdated() {
     this._syncWithTarget();
@@ -49,13 +59,6 @@ export class FvSwitcher extends LitElement {
       this._initFromUrl();
       this._hashListener = () => this._onUrlChange();
       window.addEventListener('hashchange', this._hashListener);
-    }
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    if (this._hashListener) {
-      window.removeEventListener('hashchange', this._hashListener);
     }
   }
 
@@ -67,7 +70,7 @@ export class FvSwitcher extends LitElement {
         if (view && VIEWS.includes(view as View)) {
           this.activeView = view as View;
         }
-        
+
         target.addEventListener('view-change', ((e: CustomEvent) => {
           this.activeView = e.detail.view;
           this.requestUpdate();
@@ -114,13 +117,19 @@ export class FvSwitcher extends LitElement {
   }
 
   render() {
+    const icons = getFlexiConfig().icons;
+    const iconMap: Record<View, string> = {
+      grid: icons.gridView,
+      list: icons.listView,
+      cards: icons.cardsView,
+    };
     return html`
-      <button 
+      <button
         class="active"
         @click=${this._cycle}
         title="Cambiar vista"
       >
-        ${ICONS[this.activeView]}
+        ${unsafeHTML(iconMap[this.activeView])}
       </button>
     `;
   }
@@ -129,16 +138,16 @@ export class FvSwitcher extends LitElement {
     const currentIndex = VIEWS.indexOf(this.activeView);
     const nextIndex = (currentIndex + 1) % VIEWS.length;
     const nextView = VIEWS[nextIndex];
-    
+
     this.activeView = nextView;
-    
+
     if (this.syncUrl) {
       this._updateUrl(nextView);
     }
-    
+
     // 1. Dispara evento para sincronización general
     this._notifyChange(nextView);
-    
+
     // 2. Actualiza directamente el target (fallback seguro)
     if (this.targetFor) {
       const target = document.getElementById(this.targetFor) as HTMLElement | null;

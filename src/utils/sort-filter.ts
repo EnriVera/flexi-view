@@ -51,6 +51,9 @@ export function applyFilters<T>(data: T[], filters: Filters): T[] {
     // Verificar filtros normales
     return normalFilters.every(([field, value]) => {
       const rowVal = rowObj[field];
+      if (Array.isArray(value)) {
+        return value.includes(String(rowVal ?? ''));
+      }
       if (typeof rowVal === 'number') return String(rowVal) === String(value);
       return String(rowVal ?? '').toLowerCase().includes(String(value).toLowerCase());
     });

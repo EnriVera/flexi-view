@@ -3,7 +3,10 @@ import { customElement, property, state } from 'lit/decorators.js';
 import type { ColumnConfig, SortChangeDetail, FilterChangeDetail } from '../types.js';
 import type { FilterItem } from '../utils/persistence.js';
 import { applySort, applyFilters } from '../utils/sort-filter.js';
-import { readState, writeState } from '../utils/persistence.js';
+import { readState, writeState, writeFilterToUrl, clearFilterFromUrl, readFiltersFromUrl } from '../utils/persistence.js';
+import { writeSortToUrl, clearSortFromUrl } from '../utils/persistence.js';
+import { getGridConfig } from '../registry.js';
+import './fv-header-menu.js';
 
 type View = 'grid' | 'list' | 'cards';
 
@@ -19,21 +22,22 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     }
   `;
 
-  @property({ attribute: false }) 
+  @property({ attribute: false })
   private _data: T[] = [];
-  
-  @property({ attribute: false }) 
+
+  @property({ attribute: false })
   private _columns: ColumnConfig<T>[] = [];
-  
+
   @property({ reflect: true, type: String }) view: View = 'grid';
   @property({ attribute: 'storage-key' }) storageKey?: string;
   @property({ type: Boolean, attribute: 'sync-url' }) syncUrl = false;
-  
-  // showSwitcher como property - maneja React boolean y string
+
   @property({ type: Boolean }) showSwitcher = true;
-  
-  // showSearch como property - muestra el search integrado
   @property({ type: Boolean, attribute: 'show-search' }) showSearch = true;
+
+  // Public getters para que header-menu acceda a datos filtrados
+  get filteredData(): T[] { return this._filteredData; }
+  get columnDefs(): ColumnConfig<T>[] { return this._columns; }
 
   @state() private _activeView: View = 'grid';
   private _hashListener?: () => void;
@@ -43,7 +47,8 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   @state() private _filters: Record<string, unknown> = {};
   @state() private _sortConfig: SortChangeDetail | null = null;
 
-  // API pública para data - acepta string (JSON) o array
+  private _headerMenu: HTMLElement | null = null;
+
   set data(val: T[] | string) {
     if (typeof val === 'string') {
       try {
@@ -58,7 +63,6 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   }
   get data(): T[] { return this._data; }
 
-  // API pública para columns - acepta string (JSON) o array
   set columns(val: ColumnConfig<T>[] | string) {
     if (typeof val === 'string') {
       try {
@@ -74,30 +78,23 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   get columns(): ColumnConfig<T>[] { return this._columns; }
 
   willUpdate(changedProperties: Map<string, unknown>) {
-    // Guardar en localStorage cuando cambia la propiedad 'view'
     if (changedProperties.has('view') && this.storageKey) {
-      // Usar la nueva propiedad 'view' directamente, no el state interno
       const newView = this.view;
-      
-      // Convertir filtros y orden
       const filter: FilterItem[] | null = Object.keys(this._filters).length > 0
         ? Object.entries(this._filters).map(([field, value]) => ({ field, value }))
         : null;
-      const order = this._sortConfig?.direction === 'asc' ? 'as' 
-        : this._sortConfig?.direction === 'desc' ? 'des' 
+      const sort = this._sortConfig?.direction != null
+        ? { field: this._sortConfig.field, direction: this._sortConfig.direction as 'asc' | 'desc' }
         : null;
-      
-      const payload = { views: newView, order, filter };
+      const payload = { views: newView, sort, filter };
       writeState(this.storageKey, payload);
       this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
     }
-    
-    // Actualizar URL si syncUrl está habilitado
+
     if (changedProperties.has('view') && this.syncUrl && this.view) {
       this._updateUrl(this.view);
     }
-    
-    // Solo sincronizar después de inicializado (evitar que attribute sobreescriba URL)
+
     if (this._initialized && changedProperties.has('view') && this.view) {
       if (['grid', 'list', 'cards'].includes(this.view)) {
         this._activeView = this.view;
@@ -106,7 +103,14 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   }
 
   private _onSortChange = (e: Event) => {
-    this._sortConfig = (e as CustomEvent<SortChangeDetail>).detail;
+    const detail = (e as CustomEvent<SortChangeDetail>).detail;
+    if (detail.direction === null) {
+      this._sortConfig = null;
+      if (this.syncUrl) clearSortFromUrl();
+    } else {
+      this._sortConfig = detail;
+      if (this.syncUrl) writeSortToUrl(detail.field, detail.direction);
+    }
     if (this.storageKey) {
       writeState(this.storageKey, this._persistPayload);
       this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
@@ -119,8 +123,11 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
       const next = { ...this._filters };
       delete next[field];
       this._filters = next;
+      if (this.syncUrl) clearFilterFromUrl(field);
     } else {
+      const filterValue = Array.isArray(value) ? value.join(',') : String(value);
       this._filters = { ...this._filters, [field]: value };
+      if (this.syncUrl) writeFilterToUrl(field, filterValue);
     }
     if (this.storageKey) {
       writeState(this.storageKey, this._persistPayload);
@@ -128,7 +135,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     }
   };
 
-private _onViewChange = (e: Event) => {
+  private _onViewChange = (e: Event) => {
     const { view } = (e as CustomEvent<{ view: string }>).detail;
     if (view && ['grid', 'list', 'cards'].includes(view)) {
       this._activeView = view as View;
@@ -139,39 +146,82 @@ private _onViewChange = (e: Event) => {
 
   private _onSearch = (e: Event) => {
     const { value } = (e as CustomEvent<{ value: string }>).detail;
-    // Buscar en todas las columnas que tienen field definido
     const searchFields = this._columns
       .filter(col => col.field != null)
       .map(col => String(col.field));
-    
-    // Aplicar filtro de búsqueda a todos los campos
+
     if (value === '' || value == null) {
       this._filters = {};
     } else {
-      // Crear un filtro especial que busca en cualquier campo
       this._filters = { __search: value, __searchFields: searchFields };
     }
-    
+
     if (this.storageKey) {
       writeState(this.storageKey, this._persistPayload);
       this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
     }
   };
 
+  private _onHeaderMenuOpen = (e: Event) => {
+    e.stopPropagation();
+    const { column, anchor } = (e as CustomEvent<{ column: ColumnConfig<T>; field: string; anchor: HTMLElement | null }>).detail;
+
+    const config = getGridConfig();
+    const menuTag = column.headerMenu !== undefined
+      ? column.headerMenu
+      : (config.headerMenu ?? 'fv-header-menu');
+
+    if (menuTag === false) return;
+
+    if (this._headerMenu) {
+      (this._headerMenu as any).close?.();
+      this._headerMenu.remove();
+      this._headerMenu = null;
+    }
+
+    const menu = document.createElement(menuTag) as HTMLElement & {
+      column: ColumnConfig<T>;
+      columns: ColumnConfig<T>[];
+      data: T[];
+      filteredData: T[];
+      currentSort: SortChangeDetail | null;
+      currentFilters: Record<string, unknown>;
+      anchor: HTMLElement | null;
+      open(): void;
+      close(): void;
+    };
+
+    menu.column = column;
+    menu.columns = this._columns;
+    menu.data = this._data;
+    menu.filteredData = this._filteredData;
+    menu.currentSort = this._sortConfig;
+    menu.currentFilters = this._filters;
+    menu.anchor = anchor;
+
+    menu.addEventListener('sort-change', this._onSortChange);
+    menu.addEventListener('filter-change', this._onFilterChange);
+    menu.addEventListener('fv-export-request', this._onExportRequest);
+
+    document.body.appendChild(menu);
+    this._headerMenu = menu;
+    menu.open();
+  };
+
+  private _onExportRequest = (_e: Event) => {
+    // fv-export-action handles the actual export; this is informational only
+  };
+
   private get _persistPayload() {
-    // Convertir filters a array de FilterItem
     const filter: FilterItem[] | null = Object.keys(this._filters).length > 0
       ? Object.entries(this._filters).map(([field, value]) => ({ field, value }))
       : null;
-    
-    // Convertir direction: asc → as, desc → des
-    const order = this._sortConfig?.direction === 'asc' ? 'as' 
-      : this._sortConfig?.direction === 'desc' ? 'des' 
+    const sort = this._sortConfig?.direction != null
+      ? { field: this._sortConfig.field, direction: this._sortConfig.direction as 'asc' | 'desc' }
       : null;
-    
     return {
       views: this._activeView,
-      order,
+      sort,
       filter,
     };
   }
@@ -185,26 +235,25 @@ private _onViewChange = (e: Event) => {
       this._activeView = urlView as View;
       this.view = urlView as View;
       this.requestUpdate();
-      // Guardar en localStorage cuando la URL cambia
       if (this.storageKey) {
         writeState(this.storageKey, this._persistPayload);
+      }
+    }
+    const urlSort = params.get('fv-sort');
+    if (urlSort) {
+      const [field, direction] = urlSort.split(':');
+      if (field && (direction === 'asc' || direction === 'desc')) {
+        this._sortConfig = { field, direction };
       }
     }
   };
 
   private _checkStorageChange = () => {
     if (!this.storageKey) return;
-    
     const currentValue = localStorage.getItem(this.storageKey);
-    
-    // Solo reaccionar si el valor cambió Y es diferente de lo que tenemos en memoria
-    // Esto detecta cuando el usuario borra desde DevTools (no cuando guardamos nosotros mismos)
     if (currentValue !== this._lastStorageValue) {
       this._lastStorageValue = currentValue || '';
-      
-      // Si el valor es null o vacío, el usuario borró el storage
       if (!currentValue) {
-        // Restaurar a valores por defecto
         this._activeView = 'grid';
         this.view = 'grid';
         this._filters = {};
@@ -212,20 +261,14 @@ private _onViewChange = (e: Event) => {
         this.requestUpdate();
         return;
       }
-      
-      // Si hay datos, verificar si son diferentes a nuestro estado actual
       try {
         const saved = JSON.parse(currentValue);
-        
-        // Solo actualizar si los datos son distintos a nuestro estado interno
         const currentPayload = JSON.stringify(this._persistPayload);
         if (currentValue !== currentPayload) {
-          // Restaurar desde localStorage
           if (saved.views && ['grid', 'list', 'cards'].includes(saved.views)) {
             this._activeView = saved.views as View;
             this.view = saved.views as View;
           }
-          
           if (saved.filter && Array.isArray(saved.filter)) {
             const filters: Record<string, unknown> = {};
             for (const item of saved.filter) {
@@ -233,58 +276,60 @@ private _onViewChange = (e: Event) => {
             }
             this._filters = filters;
           }
-          
-          if (saved.order) {
-            const direction = (saved.order === 'as' ? 'asc' : 'desc') as 'asc' | 'desc';
-            this._sortConfig = { field: '', direction };
+          if (saved.sort && typeof saved.sort === 'object') {
+            const { field, direction } = saved.sort;
+            if (field && (direction === 'asc' || direction === 'desc')) {
+              this._sortConfig = { field, direction };
+            }
           }
-          
           this.requestUpdate();
         }
       } catch {
-        // Ignore parse errors
+        // ignore parse errors
       }
     }
   };
 
   connectedCallback() {
     super.connectedCallback();
-    
-    // PRIORIDAD: URL > localStorage > attribute > default
+
     const urlView = this.syncUrl ? this._getUrlView() : null;
     let saved = readState(this.storageKey);
-    
-    // Si hay storage-key pero no hay datos en localStorage, inicializar con null
+
     if (this.storageKey && !saved) {
-      const initialState = { views: null, order: null, filter: null };
+      const initialState = { views: null, sort: null, filter: null };
       writeState(this.storageKey, initialState);
       saved = initialState;
     }
-    
+
     if (urlView) {
-      // URL tiene prioridad máxima
       this._activeView = urlView;
       this.view = urlView;
     } else if (saved?.views) {
-      // localStorage tiene prioridad sobre attribute
       this._activeView = saved.views as View;
       this.view = saved.views as View;
     } else {
-      // Fallback al attribute o default
       const attrView = this.getAttribute('view');
       if (attrView && ['grid', 'list', 'cards'].includes(attrView)) {
         this._activeView = attrView as View;
         this.view = attrView as View;
       }
     }
-    
-    // Restaurar order desde localStorage
-    if (saved?.order) {
-      const direction = (saved.order === 'as' ? 'asc' : 'desc') as 'asc' | 'desc';
-      this._sortConfig = { field: '', direction };
+
+    if (saved?.sort) {
+      this._sortConfig = { field: saved.sort.field, direction: saved.sort.direction };
     }
-    
-    // Restaurar filter desde localStorage
+
+    const hash = window.location.hash.slice(1);
+    const params = new URLSearchParams(hash);
+    const urlSort = params.get('fv-sort');
+    if (urlSort) {
+      const [field, direction] = urlSort.split(':');
+      if (field && (direction === 'asc' || direction === 'desc')) {
+        this._sortConfig = { field, direction };
+      }
+    }
+
     if (saved?.filter && Array.isArray(saved.filter)) {
       const filters: Record<string, unknown> = {};
       for (const item of saved.filter) {
@@ -292,31 +337,39 @@ private _onViewChange = (e: Event) => {
       }
       this._filters = filters;
     }
-    
-    // Actualizar URL para que esté sincronizada con el estado inicial
+
+    // Leer filtros desde URL si syncUrl estáhabilitado
+    if (this.syncUrl) {
+      const urlFilters = readFiltersFromUrl();
+      for (const [field, value] of Object.entries(urlFilters)) {
+        this._filters[field] = value.split(',');
+      }
+    }
+
     if (this.syncUrl && !urlView) {
       this._updateUrl(this._activeView);
     }
-    
+
     this.addEventListener('sort-change', this._onSortChange);
     this.addEventListener('filter-change', this._onFilterChange);
     this.addEventListener('view-change', this._onViewChange);
     this.addEventListener('fv-search', this._onSearch as EventListener);
-    
+    this.addEventListener('header-menu-open', this._onHeaderMenuOpen as EventListener);
+    this.addEventListener('fv-export-request', this._onExportRequest);
+
     if (this.syncUrl) {
       this._hashListener = () => this._onHashChange();
       window.addEventListener('hashchange', this._hashListener);
     }
-    
-    // Polling para detectar cambios en localStorage (el evento 'storage' no funciona en la misma página)
+
     if (this.storageKey) {
       this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
       this._storagePoller = window.setInterval(() => this._checkStorageChange(), 500);
     }
-    
+
     this._initialized = true;
   }
-  
+
   private _getUrlView(): View | null {
     const hash = window.location.hash.slice(1);
     const params = new URLSearchParams(hash);
@@ -326,7 +379,7 @@ private _onViewChange = (e: Event) => {
     }
     return null;
   }
-  
+
   private _updateUrl(view: View) {
     const hash = window.location.hash.slice(1);
     const params = new URLSearchParams(hash);
@@ -342,9 +395,16 @@ private _onViewChange = (e: Event) => {
     if (this._storagePoller) {
       window.clearInterval(this._storagePoller);
     }
+    if (this._headerMenu) {
+      (this._headerMenu as any).close?.();
+      this._headerMenu.remove();
+      this._headerMenu = null;
+    }
     this.removeEventListener('sort-change', this._onSortChange);
     this.removeEventListener('filter-change', this._onFilterChange);
     this.removeEventListener('view-change', this._onViewChange);
+    this.removeEventListener('header-menu-open', this._onHeaderMenuOpen as EventListener);
+    this.removeEventListener('fv-export-request', this._onExportRequest);
   }
 
   private get _processedData(): T[] {
@@ -371,7 +431,12 @@ private _onViewChange = (e: Event) => {
       case 'cards':
         return html`<fv-cards .data=${data} .columns=${this._columns}></fv-cards>`;
       default:
-        return html`<fv-grid .data=${data} .columns=${this._columns}></fv-grid>`;
+        return html`<fv-grid
+          .data=${data}
+          .columns=${this._columns}
+          .currentSort=${this._sortConfig}
+          .currentFilters=${this._filters}
+        ></fv-grid>`;
     }
   }
 }
