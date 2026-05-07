@@ -26,6 +26,16 @@ vi.stubGlobal('URL', {
 import { _resetRegistryForTesting, configure, subscribeConfig, DEFAULT_ICONS } from '../../registry.js';
 import { FvExportAction } from '../../components/fv-export-action.js';
 
+function makeMockExportTarget(overrides: Record<string, unknown> = {}) {
+  return {
+    filteredData: [] as Record<string, unknown>[],
+    columnDefs: [] as Array<{ title: string; field?: string; exportable?: boolean }>,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    ...overrides,
+  };
+}
+
 describe('FvExportAction', () => {
   beforeEach(() => {
     defined.clear();
@@ -87,6 +97,105 @@ describe('FvExportAction', () => {
     expect(requestEvent.detail.format).toBe('csv');
     expect(requestEvent.detail.rows).toEqual([{ name: 'Carol' }]);
     expect(requestEvent.detail.columns).toHaveLength(1);
+  });
+
+  describe('external mode — for attribute (T5)', () => {
+    it('has a for property that defaults to undefined', () => {
+      const el = new FvExportAction();
+      expect((el as any).for).toBeUndefined();
+    });
+
+    it('resolves fv-view by getElementById when for is set', async () => {
+      const target = makeMockExportTarget({
+        filteredData: [{ name: 'Alice' }],
+        columnDefs: [{ title: 'Name', field: 'name' }],
+      });
+      vi.stubGlobal('document', {
+        adoptedStyleSheets,
+        createElement: vi.fn().mockReturnValue({ href: '', download: '', click: vi.fn() }),
+        getElementById: vi.fn().mockReturnValue(target),
+      });
+
+      const el = new FvExportAction();
+      (el as any).for = 'my-view';
+      el.format = 'csv';
+      await (el as any)._connect();
+
+      expect((el as any)._target).toBe(target);
+    });
+
+    it('reads target.filteredData and target.columnDefs at click time in external mode', async () => {
+      const target = makeMockExportTarget({
+        filteredData: [{ name: 'Alice' }, { name: 'Bob' }],
+        columnDefs: [{ title: 'Name', field: 'name' }],
+      });
+      vi.stubGlobal('document', {
+        adoptedStyleSheets,
+        createElement: vi.fn().mockReturnValue({ href: '', download: '', click: vi.fn() }),
+        getElementById: vi.fn().mockReturnValue(target),
+      });
+
+      const el = new FvExportAction();
+      (el as any).for = 'my-view';
+      el.format = 'csv';
+      el.filename = 'test';
+      await (el as any)._connect();
+
+      const spy = vi.spyOn(el, 'dispatchEvent');
+      await (el as any)._onClick();
+
+      const requestEvent = spy.mock.calls
+        .map(c => c[0] as CustomEvent)
+        .find(e => e.type === 'fv-export-request')!;
+      expect(requestEvent.detail.rows).toEqual([{ name: 'Alice' }, { name: 'Bob' }]);
+      expect(requestEvent.detail.columns).toHaveLength(1);
+    });
+
+    it('respects exportable: false — filters out non-exportable columns', async () => {
+      const target = makeMockExportTarget({
+        filteredData: [{ name: 'Alice', secret: 'x' }],
+        columnDefs: [
+          { title: 'Name', field: 'name', exportable: true },
+          { title: 'Secret', field: 'secret', exportable: false },
+        ],
+      });
+      vi.stubGlobal('document', {
+        adoptedStyleSheets,
+        createElement: vi.fn().mockReturnValue({ href: '', download: '', click: vi.fn() }),
+        getElementById: vi.fn().mockReturnValue(target),
+      });
+
+      const el = new FvExportAction();
+      (el as any).for = 'my-view';
+      el.format = 'csv';
+      el.filename = 'test';
+      await (el as any)._connect();
+
+      const spy = vi.spyOn(el, 'dispatchEvent');
+      await (el as any)._onClick();
+
+      const requestEvent = spy.mock.calls
+        .map(c => c[0] as CustomEvent)
+        .find(e => e.type === 'fv-export-request')!;
+      expect(requestEvent.detail.columns).toHaveLength(1);
+      expect(requestEvent.detail.columns[0].field).toBe('name');
+    });
+
+    it('injected mode (no for) still uses own registers and fieldGrids — regression', async () => {
+      const el = new FvExportAction();
+      el.format = 'csv';
+      el.registers = [{ name: 'Carol' }];
+      el.fieldGrids = [{ title: 'Name', field: 'name' }];
+      const spy = vi.spyOn(el, 'dispatchEvent');
+
+      await (el as any)._onClick();
+
+      const requestEvent = spy.mock.calls
+        .map(c => c[0] as CustomEvent)
+        .find(e => e.type === 'fv-export-request')!;
+      expect(requestEvent.detail.rows).toEqual([{ name: 'Carol' }]);
+      expect(requestEvent.detail.columns[0].field).toBe('name');
+    });
   });
 
   it('uses default export icon from DEFAULT_ICONS', () => {

@@ -10,6 +10,8 @@ export type { PersistMode } from './types';
 export type { ExportFormat } from './types';
 export type { ExportRequestDetail } from './types';
 export type { HeaderMenuElement } from './types';
+export type { FvFilterChangeDetail } from './types';
+export type { FvSortChangeDetail } from './types';
 export type { FlexiViewConfig } from './types';
 export type { FlexiViewIcons } from './types';
 export type { FlexiViewTheme } from './types';
@@ -53,6 +55,21 @@ declare module 'react' {
       'fv-cards': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
         registers?: unknown[]
         fieldCards?: ColumnConfig[]
+      }, HTMLElement>
+      'fv-sort-action': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+        for?: string
+        field?: string
+        direction?: 'asc' | 'desc'
+        active?: boolean
+      }, HTMLElement>
+      'fv-filter-action': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+        for?: string
+        field?: string
+      }, HTMLElement>
+      'fv-export-action': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+        for?: string
+        format?: 'csv' | 'xlsx'
+        filename?: string
       }, HTMLElement>
     }
   }

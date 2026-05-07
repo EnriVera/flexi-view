@@ -15,6 +15,22 @@ vi.stubGlobal('customElements', {
 import { _resetRegistryForTesting, configure, subscribeConfig, DEFAULT_ICONS } from '../../registry.js';
 import { FvSortAction } from '../../components/fv-sort-action.js';
 
+// Helper to create a mock fv-view target
+function makeMockTarget(overrides: Record<string, unknown> = {}) {
+  const listeners = new Map<string, EventListenerOrEventListenerObject[]>();
+  return {
+    currentSort: null as { field: string; direction: 'asc' | 'desc' | null } | null,
+    addEventListener: vi.fn((type: string, handler: EventListenerOrEventListenerObject) => {
+      if (!listeners.has(type)) listeners.set(type, []);
+      listeners.get(type)!.push(handler);
+    }),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+    _listeners: listeners,
+    ...overrides,
+  };
+}
+
 describe('FvSortAction', () => {
   beforeEach(() => {
     defined.clear();
@@ -66,6 +82,92 @@ describe('FvSortAction', () => {
   it('active prop defaults to false', () => {
     const el = new FvSortAction();
     expect(el.active).toBe(false);
+  });
+
+  describe('external mode — for attribute (T3)', () => {
+    it('has a for property that defaults to undefined', () => {
+      const el = new FvSortAction();
+      expect((el as any).for).toBeUndefined();
+    });
+
+    it('reads initial sort state from target.currentSort when for is set', async () => {
+      const target = makeMockTarget({
+        currentSort: { field: 'name', direction: 'asc' },
+      });
+      vi.stubGlobal('document', {
+        adoptedStyleSheets,
+        getElementById: vi.fn().mockReturnValue(target),
+      });
+
+      const el = new FvSortAction();
+      el.field = 'name';
+      (el as any).for = 'my-view';
+
+      await (el as any)._connect();
+
+      expect(el.active).toBe(true);
+      expect(el.direction).toBe('asc');
+    });
+
+    it('subscribes to fv-sort-change on target when for is set', async () => {
+      const target = makeMockTarget({ currentSort: null });
+      vi.stubGlobal('document', {
+        adoptedStyleSheets,
+        getElementById: vi.fn().mockReturnValue(target),
+      });
+
+      const el = new FvSortAction();
+      el.field = 'name';
+      (el as any).for = 'my-view';
+
+      await (el as any)._connect();
+
+      expect(target.addEventListener).toHaveBeenCalledWith('fv-sort-change', expect.any(Function));
+    });
+
+    it('dispatches sort-change on self AND on target when _onClick fires in external mode', async () => {
+      const target = makeMockTarget({ currentSort: null });
+      vi.stubGlobal('document', {
+        adoptedStyleSheets,
+        getElementById: vi.fn().mockReturnValue(target),
+      });
+
+      const el = new FvSortAction();
+      el.field = 'age';
+      el.direction = 'desc';
+      (el as any).for = 'my-view';
+      await (el as any)._connect();
+
+      const selfSpy = vi.spyOn(el, 'dispatchEvent');
+      (el as any)._onClick();
+
+      // Self dispatch
+      expect(selfSpy).toHaveBeenCalledOnce();
+      const selfEvent = selfSpy.mock.calls[0][0] as CustomEvent;
+      expect(selfEvent.type).toBe('sort-change');
+
+      // Target dispatch
+      expect(target.dispatchEvent).toHaveBeenCalledOnce();
+      const targetEvent = (target.dispatchEvent as any).mock.calls[0][0] as CustomEvent;
+      expect(targetEvent.type).toBe('sort-change');
+      expect(targetEvent.bubbles).toBe(false);
+    });
+
+    it('disconnectedCallback removes fv-sort-change listener from target', async () => {
+      const target = makeMockTarget({ currentSort: null });
+      vi.stubGlobal('document', {
+        adoptedStyleSheets,
+        getElementById: vi.fn().mockReturnValue(target),
+      });
+
+      const el = new FvSortAction();
+      el.field = 'name';
+      (el as any).for = 'my-view';
+      await (el as any)._connect();
+      (el as any)._disconnectExternal();
+
+      expect(target.removeEventListener).toHaveBeenCalledWith('fv-sort-change', expect.any(Function));
+    });
   });
 
   it('subscribeConfig fires requestUpdate; unsubscribe stops it', () => {

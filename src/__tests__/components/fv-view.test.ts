@@ -172,6 +172,110 @@ describe('FvView', () => {
     });
   });
 
+  describe('outbound events — fv-sort-change and fv-filter-change (T2)', () => {
+    it('emits fv-sort-change when _onSortChange is called with a sort direction', () => {
+      const element = new FvView();
+      const events: CustomEvent[] = [];
+      element.addEventListener('fv-sort-change', (e) => events.push(e as CustomEvent));
+
+      (element as any)._onSortChange(new CustomEvent('sort-change', {
+        detail: { field: 'name', direction: 'asc' },
+        bubbles: true,
+      }));
+
+      expect(events).toHaveLength(1);
+      expect(events[0].detail.field).toBe('name');
+      expect(events[0].detail.direction).toBe('asc');
+    });
+
+    it('emits fv-sort-change with null detail when sort is cleared', () => {
+      const element = new FvView();
+      const events: CustomEvent[] = [];
+      element.addEventListener('fv-sort-change', (e) => events.push(e as CustomEvent));
+
+      (element as any)._onSortChange(new CustomEvent('sort-change', {
+        detail: { field: 'name', direction: null },
+        bubbles: true,
+      }));
+
+      expect(events).toHaveLength(1);
+      // When sort is cleared, _sortConfig becomes null → event detail is null
+      expect(events[0].detail).toBeNull();
+    });
+
+    it('emits fv-filter-change when _onFilterChange is called with a filter value', () => {
+      const element = new FvView();
+      const events: CustomEvent[] = [];
+      element.addEventListener('fv-filter-change', (e) => events.push(e as CustomEvent));
+
+      (element as any)._onFilterChange(new CustomEvent('filter-change', {
+        detail: { field: 'status', value: ['active'] },
+        bubbles: true,
+      }));
+
+      expect(events).toHaveLength(1);
+      expect(events[0].detail.filters).toBeDefined();
+      expect(events[0].detail.filters['status']).toEqual(['active']);
+    });
+
+    it('emits fv-filter-change with updated map when filter is removed', () => {
+      const element = new FvView();
+      (element as any)._filters = { status: ['active'], name: 'Alice' };
+      const events: CustomEvent[] = [];
+      element.addEventListener('fv-filter-change', (e) => events.push(e as CustomEvent));
+
+      (element as any)._onFilterChange(new CustomEvent('filter-change', {
+        detail: { field: 'status', value: '' },
+        bubbles: true,
+      }));
+
+      expect(events).toHaveLength(1);
+      expect(events[0].detail.filters['status']).toBeUndefined();
+      expect(events[0].detail.filters['name']).toBe('Alice');
+    });
+
+    it('emits fv-filter-change when _onSearch is called', () => {
+      const element = new FvView();
+      (element as any)._fieldGrids = [{ title: 'Name', field: 'name' }];
+      const events: CustomEvent[] = [];
+      element.addEventListener('fv-filter-change', (e) => events.push(e as CustomEvent));
+
+      (element as any)._onSearch(new CustomEvent('fv-search', {
+        detail: { value: 'Alice' },
+        bubbles: true,
+      }));
+
+      expect(events).toHaveLength(1);
+      expect(events[0].detail.filters['__search']).toBe('Alice');
+    });
+  });
+
+  describe('currentSort and currentFilters public getters (T2)', () => {
+    it('currentSort returns _sortConfig', () => {
+      const element = new FvView();
+      (element as any)._sortConfig = { field: 'name', direction: 'asc' };
+      expect(element.currentSort).toEqual({ field: 'name', direction: 'asc' });
+    });
+
+    it('currentSort returns null when no sort configured', () => {
+      const element = new FvView();
+      (element as any)._sortConfig = null;
+      expect(element.currentSort).toBeNull();
+    });
+
+    it('currentFilters returns _filters', () => {
+      const element = new FvView();
+      (element as any)._filters = { status: ['active'], name: 'Alice' };
+      expect(element.currentFilters).toEqual({ status: ['active'], name: 'Alice' });
+    });
+
+    it('currentFilters returns empty object when no filters', () => {
+      const element = new FvView();
+      (element as any)._filters = {};
+      expect(Object.keys(element.currentFilters)).toHaveLength(0);
+    });
+  });
+
   describe('_onHashChange URL guard (T2)', () => {
     it('cae al primer acceptedView si la URL tiene una vista no aceptada', () => {
       storageMock.getItem.mockReturnValue(null);

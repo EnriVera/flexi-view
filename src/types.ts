@@ -6,6 +6,7 @@ export interface ColumnConfig<T = Record<string, unknown>> {
   headerMenu?: string | false;
   visible?: boolean | ((row: T, index: number, allData: T[]) => boolean);
   disable?: boolean | ((row: T, index: number, allData: T[]) => boolean);
+  exportable?: boolean;
 }
 
 export interface DataViewOptions<T = Record<string, unknown>> {
@@ -22,7 +23,9 @@ export type ExportFormat = 'csv' | 'xlsx';
 export type Language = 'es' | 'en';
 
 export type SortChangeDetail = { field: string; direction: 'asc' | 'desc' | null };
+export type FvSortChangeDetail = SortChangeDetail;
 export type FilterChangeDetail = { field: string; value: unknown };
+export type FvFilterChangeDetail = { filters: Record<string, unknown> };
 export type RowClickDetail<T> = { item: T; index: number };
 export type PersistMode = 'local' | 'session' | 'none';
 

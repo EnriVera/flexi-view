@@ -25,17 +25,82 @@ export class FvFilterAction extends LitElement {
   @property() field = '';
   @property({ attribute: false }) selected: string[] = [];
   @property({ attribute: false }) options: string[] = [];
+  @property({ attribute: 'for' }) for?: string;
 
   private _unsubscribeConfig?: () => void;
+  private _target: (HTMLElement & Record<string, unknown>) | null = null;
+  private _onFilterChangeFromView?: (e: Event) => void;
 
   connectedCallback() {
     super.connectedCallback();
     this._unsubscribeConfig = subscribeConfig(() => this.requestUpdate());
   }
 
+  firstUpdated() {
+    if (this.for) {
+      this._connect();
+    }
+  }
+
+  private async _connect() {
+    await customElements.whenDefined('fv-view');
+    let target = document.getElementById(this.for!) as (HTMLElement & Record<string, unknown>) | null;
+    if (!target) {
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      target = document.getElementById(this.for!) as (HTMLElement & Record<string, unknown>) | null;
+    }
+    if (!target) {
+      console.warn(`[fv-filter-action] Could not find element with id "${this.for}"`);
+      return;
+    }
+    this._target = target;
+
+    // Compute options from full registers dataset (one-shot at connect — v1 limitation)
+    const registers = ((target as any).registers ?? []) as Record<string, unknown>[];
+    const uniqueValues = [...new Set(
+      registers
+        .map(r => r[this.field])
+        .filter(v => v != null)
+        .map(String)
+    )];
+    this.options = uniqueValues;
+
+    // Read initial selected from currentFilters
+    const currentFilters = ((target as any).currentFilters ?? {}) as Record<string, unknown>;
+    const initial = currentFilters[this.field];
+    if (Array.isArray(initial)) {
+      this.selected = initial.map(String);
+    } else if (initial != null) {
+      this.selected = [String(initial)];
+    }
+
+    // Subscribe to outbound filter events from fv-view
+    this._onFilterChangeFromView = (e: Event) => {
+      const { filters } = (e as CustomEvent<{ filters: Record<string, unknown> }>).detail;
+      const value = filters[this.field];
+      if (Array.isArray(value)) {
+        this.selected = value.map(String);
+      } else if (value != null) {
+        this.selected = [String(value)];
+      } else {
+        this.selected = [];
+      }
+      this.requestUpdate();
+    };
+    target.addEventListener('fv-filter-change', this._onFilterChangeFromView);
+  }
+
+  private _disconnectExternal() {
+    if (this._target && this._onFilterChangeFromView) {
+      this._target.removeEventListener('fv-filter-change', this._onFilterChangeFromView);
+    }
+    this._target = null;
+  }
+
   disconnectedCallback() {
     super.disconnectedCallback();
     this._unsubscribeConfig?.();
+    this._disconnectExternal();
   }
 
   render() {
@@ -59,12 +124,22 @@ export class FvFilterAction extends LitElement {
       ? [...this.selected, opt]
       : this.selected.filter(v => v !== opt);
 
+    const detail: FilterChangeDetail = { field: this.field, value: next.length ? next : null };
     this.dispatchEvent(
       new CustomEvent<FilterChangeDetail>('filter-change', {
-        detail: { field: this.field, value: next.length ? next : null },
+        detail,
         bubbles: true,
         composed: true,
       })
     );
+    if (this._target) {
+      this._target.dispatchEvent(
+        new CustomEvent<FilterChangeDetail>('filter-change', {
+          detail,
+          bubbles: false,
+          composed: false,
+        })
+      );
+    }
   }
 }

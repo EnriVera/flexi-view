@@ -30,17 +30,40 @@ export class FvExportAction extends LitElement {
   @property() filename = 'export';
   @property({ attribute: false }) registers: Record<string, unknown>[] = [];
   @property({ attribute: false }) fieldGrids: ColumnConfig[] = [];
+  @property({ attribute: 'for' }) for?: string;
 
   private _unsubscribeConfig?: () => void;
+  private _target: (HTMLElement & Record<string, unknown>) | null = null;
 
   connectedCallback() {
     super.connectedCallback();
     this._unsubscribeConfig = subscribeConfig(() => this.requestUpdate());
   }
 
+  firstUpdated() {
+    if (this.for) {
+      this._connect();
+    }
+  }
+
+  private async _connect() {
+    await customElements.whenDefined('fv-view');
+    let target = document.getElementById(this.for!) as (HTMLElement & Record<string, unknown>) | null;
+    if (!target) {
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      target = document.getElementById(this.for!) as (HTMLElement & Record<string, unknown>) | null;
+    }
+    if (!target) {
+      console.warn(`[fv-export-action] Could not find element with id "${this.for}"`);
+      return;
+    }
+    this._target = target;
+  }
+
   disconnectedCallback() {
     super.disconnectedCallback();
     this._unsubscribeConfig?.();
+    this._target = null;
   }
 
   render() {
@@ -55,10 +78,23 @@ export class FvExportAction extends LitElement {
   }
 
   private async _onClick() {
+    let rows: Record<string, unknown>[];
+    let columns: ColumnConfig[];
+
+    if (this._target) {
+      rows = ((this._target as any).filteredData ?? []) as Record<string, unknown>[];
+      const allColumns = ((this._target as any).columnDefs ?? []) as ColumnConfig[];
+      // Respect exportable: false — only export columns where exportable is not explicitly false
+      columns = allColumns.filter(col => col.exportable !== false);
+    } else {
+      rows = this.registers;
+      columns = this.fieldGrids.filter(col => col.exportable !== false);
+    }
+
     const detail: ExportRequestDetail = {
       format: this.format,
-      columns: this.fieldGrids,
-      rows: this.registers,
+      columns,
+      rows,
     };
 
     this.dispatchEvent(
@@ -71,12 +107,12 @@ export class FvExportAction extends LitElement {
 
     try {
       if (this.format === 'csv') {
-        exportCSV(this.registers, this.fieldGrids, this.filename);
+        exportCSV(rows, columns, this.filename);
       } else {
         const config = getGridConfig();
         const loader = config.export?.excelLibrary;
         if (!loader) throw new Error('No excelLibrary configured');
-        await exportXLSX(this.registers, this.fieldGrids, this.filename, loader as Parameters<typeof exportXLSX>[3]);
+        await exportXLSX(rows, columns, this.filename, loader as Parameters<typeof exportXLSX>[3]);
       }
 
       this.dispatchEvent(

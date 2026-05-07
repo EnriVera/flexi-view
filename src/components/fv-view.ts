@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import type { ColumnConfig, SortChangeDetail, FilterChangeDetail } from '../types.js';
+import type { ColumnConfig, SortChangeDetail, FilterChangeDetail, FvFilterChangeDetail } from '../types.js';
 import type { FilterItem } from '../utils/persistence.js';
 import { applySort, applyFilters } from '../utils/sort-filter.js';
 import { readState, writeState, writeFilterToUrl, clearFilterFromUrl, readFiltersFromUrl } from '../utils/persistence.js';
@@ -48,6 +48,13 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     if (this._fieldRows.length > 0) views.push('list');
     if (this._fieldCards.length > 0) views.push('cards');
     return views;
+  }
+
+  get currentSort(): SortChangeDetail | null { return this._sortConfig; }
+  get currentFilters(): Record<string, unknown> { return this._filters; }
+
+  private _emitStateEvent(name: string, detail: unknown) {
+    this.dispatchEvent(new CustomEvent(name, { detail, bubbles: true, composed: true }));
   }
 
   @state() private _activeView: View = 'grid';
@@ -150,6 +157,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
       this._sortConfig = detail;
       if (this.syncUrl) writeSortToUrl(detail.field, detail.direction);
     }
+    this._emitStateEvent('fv-sort-change', this._sortConfig);
     if (this.storageKey) {
       writeState(this.storageKey, this._persistPayload);
       this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
@@ -168,6 +176,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
       this._filters = { ...this._filters, [field]: value };
       if (this.syncUrl) writeFilterToUrl(field, filterValue);
     }
+    this._emitStateEvent('fv-filter-change', { filters: this._filters } as FvFilterChangeDetail);
     if (this.storageKey) {
       writeState(this.storageKey, this._persistPayload);
       this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
@@ -196,6 +205,8 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     } else {
       this._filters = { ...this._filters, __search: value, __searchFields: searchFields };
     }
+
+    this._emitStateEvent('fv-filter-change', { filters: this._filters } as FvFilterChangeDetail);
 
     if (this.storageKey) {
       writeState(this.storageKey, this._persistPayload);
@@ -304,6 +315,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
       const [field, direction] = urlSort.split(':');
       if (field && (direction === 'asc' || direction === 'desc')) {
         this._sortConfig = { field, direction };
+        this._emitStateEvent('fv-sort-change', this._sortConfig);
       }
     }
   };
@@ -327,6 +339,8 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
         this.view = defaultView;
         this._filters = {};
         this._sortConfig = null;
+        this._emitStateEvent('fv-sort-change', this._sortConfig);
+        this._emitStateEvent('fv-filter-change', { filters: this._filters } as FvFilterChangeDetail);
         this.requestUpdate();
         return;
       }
@@ -352,11 +366,13 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
               filters[item.field] = item.value;
             }
             this._filters = filters;
+            this._emitStateEvent('fv-filter-change', { filters: this._filters } as FvFilterChangeDetail);
           }
           if (saved.sort && typeof saved.sort === 'object') {
             const { field, direction } = saved.sort;
             if (field && (direction === 'asc' || direction === 'desc')) {
               this._sortConfig = { field, direction };
+              this._emitStateEvent('fv-sort-change', this._sortConfig);
             }
           }
           this.requestUpdate();
@@ -438,6 +454,10 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
         this._filters[field] = value.split(',');
       }
     }
+
+    // Emit initial state so external action components can sync on connect
+    this._emitStateEvent('fv-sort-change', this._sortConfig);
+    this._emitStateEvent('fv-filter-change', { filters: this._filters } as FvFilterChangeDetail);
 
     if (this.syncUrl && !urlView) {
       this._updateUrl(this._activeView);
