@@ -62,14 +62,14 @@ export class FvGrid<T = Record<string, unknown>> extends LitElement {
     tr:hover td { background: var(--fv-row-hover, #f9fafb); }
   `;
 
-  @property({ attribute: false }) data: T[] = [];
-  @property({ attribute: false }) columns: ColumnConfig<T>[] = [];
+  @property({ attribute: false }) registers: T[] = [];
+  @property({ attribute: false }) fieldGrids: ColumnConfig<T>[] = [];
   @property({ attribute: false }) currentSort: SortChangeDetail | null = null;
   @property({ attribute: false }) currentFilters: Record<string, unknown> = {};
 
   updated(changed: Map<string, unknown>) {
-    if (changed.has('columns')) {
-      this.columns.forEach(col => resolveControl(col.control || 'fv-text'));
+    if (changed.has('fieldGrids')) {
+      this.fieldGrids.forEach(col => resolveControl(col.control || 'fv-text'));
     }
   }
 
@@ -77,11 +77,11 @@ export class FvGrid<T = Record<string, unknown>> extends LitElement {
     return html`
       <table>
         <thead>
-          <tr>${this.columns.map(col => this._renderHeader(col))}</tr>
+          <tr>${this.fieldGrids.map(col => this._renderHeader(col))}</tr>
         </thead>
         <tbody>
-          ${this.data.map((row, i) => html`
-            <tr>${this.columns.map(col => this._renderCell(row, col, i))}</tr>
+          ${this.registers.map((row, i) => html`
+            <tr>${this.fieldGrids.map(col => this._renderCell(row, col, i))}</tr>
           `)}
         </tbody>
       </table>
@@ -134,7 +134,7 @@ export class FvGrid<T = Record<string, unknown>> extends LitElement {
   private _renderCell(row: T, col: ColumnConfig<T>, index: number) {
     const visible =
       typeof col.visible === 'function'
-        ? col.visible(row, index, this.data)
+        ? col.visible(row, index, this.registers)
         : col.visible !== false;
     if (!visible) return html`<td></td>`;
 

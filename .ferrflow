@@ -1,0 +1,16 @@
+{
+  "$schema": "https://ferrflow.com/schema/ferrflow.json",
+  "workspace": {
+    "tagTemplate": "v{version}"
+  },
+  "package": [
+    {
+      "name": "flexi-view",
+      "path": ".",
+      "changelog": "CHANGELOG.md",
+      "versionedFiles": [
+        { "path": "package.json", "format": "json" }
+      ]
+    }
+  ]
+}

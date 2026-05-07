@@ -62,8 +62,8 @@ static styles = css`
   `;
 
   @property({ attribute: false }) column: ColumnConfig<T> = { title: '' };
-  @property({ attribute: false }) columns: ColumnConfig<T>[] = [];
-  @property({ attribute: false }) data: T[] = [];
+  @property({ attribute: false }) fieldGrids: ColumnConfig<T>[] = [];
+  @property({ attribute: false }) registers: T[] = [];
   @property({ attribute: false }) filteredData: T[] = [];
   @property({ attribute: false }) currentSort: SortChangeDetail | null = null;
   @property({ attribute: false }) currentFilters: Record<string, unknown> = {};
@@ -107,7 +107,7 @@ static styles = css`
     const field = this.column.field != null ? String(this.column.field) : this.column.title;
     const currentSelected = (this.currentFilters[field] as string[] | undefined) ?? [];
     const uniqueOptions = [...new Set(
-      (this.data as Record<string, unknown>[]).map(row => String(row[field] ?? ''))
+      (this.registers as Record<string, unknown>[]).map(row => String(row[field] ?? ''))
     )].filter(v => v !== '').sort();
 
     const modal = document.createElement('fv-filter-modal') as HTMLElement & {
@@ -140,11 +140,11 @@ static styles = css`
   }
 
   private get _allColumns(): ColumnConfig<T>[] {
-    return this.columns?.length > 0 ? this.columns : [this.column];
+    return this.fieldGrids?.length > 0 ? this.fieldGrids : [this.column];
   }
 
   private get _dataForExport(): T[] {
-    return this.filteredData?.length > 0 ? this.filteredData : this.data;
+    return this.filteredData?.length > 0 ? this.filteredData : this.registers;
   }
 
   render() {
@@ -154,7 +154,7 @@ static styles = css`
     const field = this.column.field != null ? String(this.column.field) : this.column.title;
     const currentSelected = (this.currentFilters[field] as string[] | undefined) ?? [];
     const uniqueOptions = [...new Set(
-      (this.data as Record<string, unknown>[]).map(row => String(row[field] ?? ''))
+      (this.registers as Record<string, unknown>[]).map(row => String(row[field] ?? ''))
     )].filter(v => v !== '').sort();
     const isAscActive =
       this.currentSort?.field === field && this.currentSort?.direction === 'asc';
@@ -196,8 +196,8 @@ static styles = css`
           <fv-export-action
             format="csv"
             filename="data"
-            .data=${this._dataForExport as Record<string, unknown>[]}
-            .columns=${this._allColumns as ColumnConfig[]}
+            .registers=${this._dataForExport as Record<string, unknown>[]}
+            .fieldGrids=${this._allColumns as ColumnConfig[]}
             @fv-export-request=${this._onExportRequest}
           ></fv-export-action>
         </div>

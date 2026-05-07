@@ -28,8 +28,8 @@ export class FvExportAction extends LitElement {
 
   @property() format: ExportFormat = 'csv';
   @property() filename = 'export';
-  @property({ attribute: false }) data: Record<string, unknown>[] = [];
-  @property({ attribute: false }) columns: ColumnConfig[] = [];
+  @property({ attribute: false }) registers: Record<string, unknown>[] = [];
+  @property({ attribute: false }) fieldGrids: ColumnConfig[] = [];
 
   private _unsubscribeConfig?: () => void;
 
@@ -57,8 +57,8 @@ export class FvExportAction extends LitElement {
   private async _onClick() {
     const detail: ExportRequestDetail = {
       format: this.format,
-      columns: this.columns,
-      rows: this.data,
+      columns: this.fieldGrids,
+      rows: this.registers,
     };
 
     this.dispatchEvent(
@@ -71,12 +71,12 @@ export class FvExportAction extends LitElement {
 
     try {
       if (this.format === 'csv') {
-        exportCSV(this.data, this.columns, this.filename);
+        exportCSV(this.registers, this.fieldGrids, this.filename);
       } else {
         const config = getGridConfig();
         const loader = config.export?.excelLibrary;
         if (!loader) throw new Error('No excelLibrary configured');
-        await exportXLSX(this.data, this.columns, this.filename, loader as Parameters<typeof exportXLSX>[3]);
+        await exportXLSX(this.registers, this.fieldGrids, this.filename, loader as Parameters<typeof exportXLSX>[3]);
       }
 
       this.dispatchEvent(

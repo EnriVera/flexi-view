@@ -1,0 +1,15 @@
+#!/bin/sh
+commit_msg=$(cat "$1")
+pattern="^(feat|fix|docs|style|refactor|test|chore|build|ci|perf|revert)(\(.+\))?: .{1,72}"
+
+if ! echo "$commit_msg" | grep -qE "$pattern"; then
+  echo ""
+  echo "❌ Commit message does not follow Conventional Commits format."
+  echo ""
+  echo "   Expected: <type>(<scope>): <description>"
+  echo "   Example:  feat(grid): add column resizing"
+  echo ""
+  echo "   Types: feat | fix | docs | style | refactor | test | chore | build | ci | perf | revert"
+  echo ""
+  exit 1
+fi

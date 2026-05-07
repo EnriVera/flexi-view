@@ -23,10 +23,14 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   `;
 
   @property({ attribute: false })
-  private _data: T[] = [];
+  private _registers: T[] = [];
 
   @property({ attribute: false })
-  private _columns: ColumnConfig<T>[] = [];
+  private _fieldGrids: ColumnConfig<T>[] = [];
+  @property({ attribute: false })
+  private _fieldRows: ColumnConfig<T>[] = [];
+  @property({ attribute: false })
+  private _fieldCards: ColumnConfig<T>[] = [];
 
   @property({ reflect: true, type: String }) view: View = 'grid';
   @property({ attribute: 'storage-key' }) storageKey?: string;
@@ -36,8 +40,15 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   @property({ type: Boolean, attribute: 'show-search' }) showSearch = true;
 
   // Public getters para que header-menu acceda a datos filtrados
-  get filteredData(): T[] { return this._filteredData; }
-  get columnDefs(): ColumnConfig<T>[] { return this._columns; }
+  get filteredData(): T[] { return this._processedData; }
+  get columnDefs(): ColumnConfig<T>[] { return this._fieldGrids; }
+  get acceptedViews(): View[] {
+    const views: View[] = [];
+    if (this._fieldGrids.length > 0) views.push('grid');
+    if (this._fieldRows.length > 0) views.push('list');
+    if (this._fieldCards.length > 0) views.push('cards');
+    return views;
+  }
 
   @state() private _activeView: View = 'grid';
   private _hashListener?: () => void;
@@ -49,33 +60,61 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
 
   private _headerMenu: HTMLElement | null = null;
 
-  set data(val: T[] | string) {
+  set registers(val: T[] | string) {
     if (typeof val === 'string') {
       try {
-        this._data = JSON.parse(val);
+        this._registers = JSON.parse(val);
       } catch {
-        this._data = [];
+        this._registers = [];
       }
     } else {
-      this._data = val || [];
+      this._registers = val || [];
     }
     this.requestUpdate();
   }
-  get data(): T[] { return this._data; }
+  get registers(): T[] { return this._registers; }
 
-  set columns(val: ColumnConfig<T>[] | string) {
+  set fieldGrids(val: ColumnConfig<T>[] | string) {
     if (typeof val === 'string') {
       try {
-        this._columns = JSON.parse(val);
+        this._fieldGrids = JSON.parse(val);
       } catch {
-        this._columns = [];
+        this._fieldGrids = [];
       }
     } else {
-      this._columns = val || [];
+      this._fieldGrids = val || [];
     }
     this.requestUpdate();
   }
-  get columns(): ColumnConfig<T>[] { return this._columns; }
+  get fieldGrids(): ColumnConfig<T>[] { return this._fieldGrids; }
+
+  set fieldRows(val: ColumnConfig<T>[] | string) {
+    if (typeof val === 'string') {
+      try {
+        this._fieldRows = JSON.parse(val);
+      } catch {
+        this._fieldRows = [];
+      }
+    } else {
+      this._fieldRows = val || [];
+    }
+    this.requestUpdate();
+  }
+  get fieldRows(): ColumnConfig<T>[] { return this._fieldRows; }
+
+  set fieldCards(val: ColumnConfig<T>[] | string) {
+    if (typeof val === 'string') {
+      try {
+        this._fieldCards = JSON.parse(val);
+      } catch {
+        this._fieldCards = [];
+      }
+    } else {
+      this._fieldCards = val || [];
+    }
+    this.requestUpdate();
+  }
+  get fieldCards(): ColumnConfig<T>[] { return this._fieldCards; }
 
   willUpdate(changedProperties: Map<string, unknown>) {
     if (changedProperties.has('view') && this.storageKey) {
@@ -146,7 +185,8 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
 
   private _onSearch = (e: Event) => {
     const { value } = (e as CustomEvent<{ value: string }>).detail;
-    const searchFields = this._columns
+    const activeColumns = this.fieldGrids;
+    const searchFields = activeColumns
       .filter(col => col.field != null)
       .map(col => String(col.field));
 
@@ -184,6 +224,8 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
       columns: ColumnConfig<T>[];
       data: T[];
       filteredData: T[];
+      fieldGrids: ColumnConfig<T>[];
+      registers: Record<string, unknown>;
       currentSort: SortChangeDetail | null;
       currentFilters: Record<string, unknown>;
       anchor: HTMLElement | null;
@@ -192,9 +234,9 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     };
 
     menu.column = column;
-    menu.columns = this._columns;
-    menu.data = this._data;
-    menu.filteredData = this._filteredData;
+    menu.fieldGrids = this._fieldGrids;
+    menu.registers = this._registers;
+    menu.filteredData = this._processedData;
     menu.currentSort = this._sortConfig;
     menu.currentFilters = this._filters;
     menu.anchor = anchor;
@@ -231,12 +273,29 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     const hash = window.location.hash.slice(1);
     const params = new URLSearchParams(hash);
     const urlView = params.get('view');
-    if (urlView && ['grid', 'list', 'cards'].includes(urlView) && urlView !== this._activeView) {
-      this._activeView = urlView as View;
-      this.view = urlView as View;
-      this.requestUpdate();
-      if (this.storageKey) {
-        writeState(this.storageKey, this._persistPayload);
+
+    if (urlView && ['grid', 'list', 'cards'].includes(urlView)) {
+      const acceptedViews: View[] = [];
+      if (this._fieldGrids && this._fieldGrids.length > 0) acceptedViews.push('grid');
+      if (this._fieldRows && this._fieldRows.length > 0) acceptedViews.push('list');
+      if (this._fieldCards && this._fieldCards.length > 0) acceptedViews.push('cards');
+
+      let targetView: View;
+      if (acceptedViews.length > 0 && !acceptedViews.includes(urlView as View)) {
+        // URL view not accepted — fall back to first accepted view and rewrite hash
+        targetView = acceptedViews[0];
+        this._updateUrl(targetView);
+      } else {
+        targetView = urlView as View;
+      }
+
+      if (targetView !== this._activeView) {
+        this._activeView = targetView;
+        this.view = targetView;
+        this.requestUpdate();
+        if (this.storageKey) {
+          writeState(this.storageKey, this._persistPayload);
+        }
       }
     }
     const urlSort = params.get('fv-sort');
@@ -251,11 +310,20 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   private _checkStorageChange = () => {
     if (!this.storageKey) return;
     const currentValue = localStorage.getItem(this.storageKey);
+
+    // Determine acceptedViews from current field configurations
+    const acceptedViews: string[] = [];
+    if (this._fieldGrids && this._fieldGrids.length > 0) acceptedViews.push('grid');
+    if (this._fieldRows && this._fieldRows.length > 0) acceptedViews.push('list');
+    if (this._fieldCards && this._fieldCards.length > 0) acceptedViews.push('cards');
+
     if (currentValue !== this._lastStorageValue) {
       this._lastStorageValue = currentValue || '';
       if (!currentValue) {
-        this._activeView = 'grid';
-        this.view = 'grid';
+        // Default to first accepted view or 'grid' as fallback
+        const defaultView = acceptedViews.length > 0 ? acceptedViews[0] as View : 'grid';
+        this._activeView = defaultView;
+        this.view = defaultView;
         this._filters = {};
         this._sortConfig = null;
         this.requestUpdate();
@@ -266,8 +334,16 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
         const currentPayload = JSON.stringify(this._persistPayload);
         if (currentValue !== currentPayload) {
           if (saved.views && ['grid', 'list', 'cards'].includes(saved.views)) {
-            this._activeView = saved.views as View;
-            this.view = saved.views as View;
+            if (acceptedViews.includes(saved.views)) {
+              this._activeView = saved.views as View;
+              this.view = saved.views as View;
+            } else if (acceptedViews.length > 0) {
+              // Saved view not in acceptedViews, default to first accepted
+              const defaultView = acceptedViews[0] as View;
+              this._activeView = defaultView;
+              this.view = defaultView;
+            }
+            // If acceptedViews is empty, keep current view (no valid views configured)
           }
           if (saved.filter && Array.isArray(saved.filter)) {
             const filters: Record<string, unknown> = {};
@@ -293,6 +369,12 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   connectedCallback() {
     super.connectedCallback();
 
+    // Determine acceptedViews from field configurations
+    const acceptedViews: string[] = [];
+    if (this._fieldGrids && this._fieldGrids.length > 0) acceptedViews.push('grid');
+    if (this._fieldRows && this._fieldRows.length > 0) acceptedViews.push('list');
+    if (this._fieldCards && this._fieldCards.length > 0) acceptedViews.push('cards');
+
     const urlView = this.syncUrl ? this._getUrlView() : null;
     let saved = readState(this.storageKey);
 
@@ -302,19 +384,27 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
       saved = initialState;
     }
 
-    if (urlView) {
-      this._activeView = urlView;
-      this.view = urlView;
-    } else if (saved?.views) {
-      this._activeView = saved.views as View;
-      this.view = saved.views as View;
+    // Determine initial view with acceptedViews priority
+    let initialView: View | null = null;
+
+    if (urlView && acceptedViews.includes(urlView)) {
+      initialView = urlView;
+    } else if (saved?.views && acceptedViews.includes(saved.views as string)) {
+      initialView = saved.views as View;
     } else {
       const attrView = this.getAttribute('view');
-      if (attrView && ['grid', 'list', 'cards'].includes(attrView)) {
-        this._activeView = attrView as View;
-        this.view = attrView as View;
+      if (attrView && acceptedViews.includes(attrView)) {
+        initialView = attrView as View;
       }
     }
+
+    // Default to first accepted view or 'grid' as fallback
+    if (!initialView) {
+      initialView = acceptedViews.length > 0 ? acceptedViews[0] as View : 'grid';
+    }
+
+    this._activeView = initialView;
+    this.view = initialView;
 
     if (saved?.sort) {
       this._sortConfig = { field: saved.sort.field, direction: saved.sort.direction };
@@ -408,16 +498,34 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   }
 
   private get _processedData(): T[] {
-    return applySort(applyFilters(this._data, this._filters), this._sortConfig);
+    return applySort(applyFilters(this._registers, this._filters), this._sortConfig);
   }
 
   render() {
     const data = this._processedData;
+
+    // Determine which views are available based on field configurations
+    const acceptedViews: string[] = [];
+    if (this._fieldGrids && this._fieldGrids.length > 0) acceptedViews.push('grid');
+    if (this._fieldRows && this._fieldRows.length > 0) acceptedViews.push('list');
+    if (this._fieldCards && this._fieldCards.length > 0) acceptedViews.push('cards');
+
+    // Determine active view: default to first accepted view, or 'grid' as fallback
+    let activeView: View;
+    if (acceptedViews.length > 0) {
+      activeView = acceptedViews.includes(this._activeView) ? this._activeView : acceptedViews[0] as View;
+    } else {
+      activeView = this._activeView && ['grid', 'list', 'cards'].includes(this._activeView) ? this._activeView : 'grid';
+    }
+
+    // Show switcher only when there are multiple accepted views
+    const showSwitcher = this.showSwitcher && acceptedViews.length > 1;
+
     return html`
-      ${this.showSearch || this.showSwitcher ? html`
+      ${this.showSearch || showSwitcher ? html`
         <div class="controls">
           ${this.showSearch ? html`<fv-search placeholder="Search..." debounce></fv-search>` : ''}
-          ${this.showSwitcher ? html`<fv-switcher .activeView=${this._activeView} .targetFor=${this.id}></fv-switcher>` : ''}
+          ${showSwitcher ? html`<fv-switcher .activeView=${activeView} .targetFor=${this.id} .acceptedViews=${acceptedViews}></fv-switcher>` : ''}
         </div>
       ` : ''}
       ${this._renderView(data)}
@@ -425,15 +533,18 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   }
 
   private _renderView(data: T[]) {
+    const fieldGrids = this._fieldGrids;
+    const fieldRows = this._fieldRows;
+    const fieldCards = this._fieldCards;
     switch (this._activeView) {
       case 'list':
-        return html`<fv-list .data=${data} .columns=${this._columns}></fv-list>`;
+        return html`<fv-list .registers=${data} .fieldRows=${fieldRows}></fv-list>`;
       case 'cards':
-        return html`<fv-cards .data=${data} .columns=${this._columns}></fv-cards>`;
+        return html`<fv-cards .registers=${data} .fieldCards=${fieldCards}></fv-cards>`;
       default:
         return html`<fv-grid
-          .data=${data}
-          .columns=${this._columns}
+          .registers=${data}
+          .fieldGrids=${fieldGrids}
           .currentSort=${this._sortConfig}
           .currentFilters=${this._filters}
         ></fv-grid>`;

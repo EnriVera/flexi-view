@@ -36,8 +36,8 @@ describe('FvExportAction', () => {
   it('dispatches fv-export-request before performing export', async () => {
     const el = new FvExportAction();
     el.format = 'csv';
-    el.data = [{ name: 'Alice' }];
-    el.columns = [{ title: 'Name', field: 'name' }];
+    el.registers = [{ name: 'Alice' }];
+    el.fieldGrids = [{ title: 'Name', field: 'name' }];
     const spy = vi.spyOn(el, 'dispatchEvent');
 
     await (el as any)._onClick();
@@ -49,8 +49,8 @@ describe('FvExportAction', () => {
   it('dispatches fv-export-done after successful CSV export', async () => {
     const el = new FvExportAction();
     el.format = 'csv';
-    el.data = [{ name: 'Bob' }];
-    el.columns = [{ title: 'Name', field: 'name' }];
+    el.registers = [{ name: 'Bob' }];
+    el.fieldGrids = [{ title: 'Name', field: 'name' }];
     const spy = vi.spyOn(el, 'dispatchEvent');
 
     await (el as any)._onClick();
@@ -62,8 +62,8 @@ describe('FvExportAction', () => {
   it('dispatches fv-export-error when XLSX loader is not configured', async () => {
     const el = new FvExportAction();
     el.format = 'xlsx';
-    el.data = [];
-    el.columns = [];
+    el.registers = [];
+    el.fieldGrids = [];
     const spy = vi.spyOn(el, 'dispatchEvent');
 
     await (el as any)._onClick();
@@ -75,8 +75,8 @@ describe('FvExportAction', () => {
   it('fv-export-request contains format, columns, and rows', async () => {
     const el = new FvExportAction();
     el.format = 'csv';
-    el.data = [{ name: 'Carol' }];
-    el.columns = [{ title: 'Name', field: 'name' }];
+    el.registers = [{ name: 'Carol' }];
+    el.fieldGrids = [{ title: 'Name', field: 'name' }];
     const spy = vi.spyOn(el, 'dispatchEvent');
 
     await (el as any)._onClick();

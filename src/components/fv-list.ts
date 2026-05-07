@@ -28,22 +28,22 @@ export class FvList<T = Record<string, unknown>> extends LitElement {
     .cell:last-child { padding-right: 0; }
   `;
 
-  @property({ attribute: false }) data: T[] = [];
-  @property({ attribute: false }) columns: ColumnConfig<T>[] = [];
+  @property({ attribute: false }) registers: T[] = [];
+  @property({ attribute: false }) fieldRows: ColumnConfig<T>[] = [];
 
   updated(changed: Map<string, unknown>) {
-    if (changed.has('columns')) {
-      this.columns.forEach(col => resolveControl(col.control || 'fv-text'));
+    if (changed.has('fieldRows')) {
+      this.fieldRows.forEach(col => resolveControl(col.control || 'fv-text'));
     }
   }
 
   render() {
     return html`
       <ul>
-        ${this.data.map(
+        ${this.registers.map(
           (row, i) => html`
             <li @click=${() => this._rowClick(row, i)}>
-              ${this.columns.map(col => this._renderCell(row, col, i))}
+              ${this.fieldRows.map(col => this._renderCell(row, col, i))}
             </li>
           `
         )}
@@ -54,7 +54,7 @@ export class FvList<T = Record<string, unknown>> extends LitElement {
   private _renderCell(row: T, col: ColumnConfig<T>, index: number) {
     const visible =
       typeof col.visible === 'function'
-        ? col.visible(row, index, this.data)
+        ? col.visible(row, index, this.registers)
         : col.visible !== false;
     if (!visible) return html``;
 

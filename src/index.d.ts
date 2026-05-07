@@ -21,8 +21,10 @@ declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
       'fv-view': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
-        data?: unknown[]
-        columns?: ColumnConfig[]
+        registers?: unknown[]
+        fieldGrids?: ColumnConfig[]
+        fieldRows?: ColumnConfig[]
+        fieldCards?: ColumnConfig[]
         view?: 'grid' | 'list' | 'cards'
         'show-switcher'?: boolean
         'show-search'?: boolean
@@ -41,16 +43,16 @@ declare module 'react' {
         'debounce-ms'?: number
       }, HTMLElement>
       'fv-grid': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
-        data?: unknown[]
-        columns?: ColumnConfig[]
+        registers?: unknown[]
+        fieldGrids?: ColumnConfig[]
       }, HTMLElement>
       'fv-list': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
-        data?: unknown[]
-        columns?: ColumnConfig[]
+        registers?: unknown[]
+        fieldRows?: ColumnConfig[]
       }, HTMLElement>
       'fv-cards': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
-        data?: unknown[]
-        columns?: ColumnConfig[]
+        registers?: unknown[]
+        fieldCards?: ColumnConfig[]
       }, HTMLElement>
     }
   }

@@ -9,8 +9,10 @@ export interface ColumnConfig<T = Record<string, unknown>> {
 }
 
 export interface DataViewOptions<T = Record<string, unknown>> {
-  data: T[];
-  columns: ColumnConfig<T>[];
+  registers: T[];
+  fieldGrids?: ColumnConfig<T>[];
+  fieldRows?: ColumnConfig<T>[];
+  fieldCards?: ColumnConfig<T>[];
   view?: 'grid' | 'list' | 'cards';
   storageKey?: string;
 }
@@ -32,8 +34,8 @@ export interface ExportRequestDetail {
 
 export interface HeaderMenuElement<T = Record<string, unknown>> {
   column: ColumnConfig<T>;
-  columns: ColumnConfig<T>[];
-  data: T[];
+  fieldGrids: ColumnConfig<T>[];
+  registers: T[];
   filteredData: T[];
   currentSort: SortChangeDetail | null;
   currentFilters: Record<string, unknown>;

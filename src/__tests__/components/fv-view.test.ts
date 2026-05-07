@@ -141,8 +141,68 @@ describe('FvView', () => {
     it('acepta cards como view válida', () => {
       const element = new FvView();
       (element as any).view = 'cards';
-      
+
       expect(['grid', 'list', 'cards']).toContain((element as any).view);
+    });
+  });
+
+  describe('filteredData getter (T1)', () => {
+    it('retorna los registros sin filtros ni sort', () => {
+      const element = new FvView();
+      (element as any)._registers = [{ id: 1 }, { id: 2 }];
+      (element as any)._filters = {};
+      (element as any)._sortConfig = null;
+
+      const result = (element as any).filteredData;
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({ id: 1 });
+    });
+
+    it('retorna datos filtrados cuando hay filtros activos', () => {
+      const element = new FvView();
+      (element as any)._registers = [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }];
+      (element as any)._filters = { name: 'Alice' };
+      (element as any)._sortConfig = null;
+
+      const result = (element as any).filteredData;
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual({ id: 1, name: 'Alice' });
+    });
+  });
+
+  describe('_onHashChange URL guard (T2)', () => {
+    it('cae al primer acceptedView si la URL tiene una vista no aceptada', () => {
+      storageMock.getItem.mockReturnValue(null);
+      windowMock.location.hash = '#view=list';
+
+      const element = new FvView();
+      (element as any).syncUrl = true;
+      (element as any)._activeView = 'grid';
+      (element as any)._fieldGrids = [{ field: 'id' }];
+      (element as any)._fieldCards = [{ field: 'name' }];
+      // Only grid and cards are accepted
+
+      (element as any)._onHashChange();
+
+      // 'list' is not in acceptedViews(['grid','cards']), should fall back to 'grid'
+      expect((element as any)._activeView).toBe('grid');
+    });
+
+    it('aplica la vista de la URL cuando es aceptada', () => {
+      storageMock.getItem.mockReturnValue(null);
+      windowMock.location.hash = '#view=cards';
+
+      const element = new FvView();
+      (element as any).syncUrl = true;
+      (element as any)._activeView = 'grid';
+      (element as any)._fieldGrids = [{ field: 'id' }];
+      (element as any)._fieldCards = [{ field: 'name' }];
+
+      (element as any)._onHashChange();
+
+      expect((element as any)._activeView).toBe('cards');
     });
   });
 });
