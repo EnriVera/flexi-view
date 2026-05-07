@@ -191,9 +191,10 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
       .map(col => String(col.field));
 
     if (value === '' || value == null) {
-      this._filters = {};
+      const { __search: _, __searchFields: __, ...rest } = this._filters;
+      this._filters = rest;
     } else {
-      this._filters = { __search: value, __searchFields: searchFields };
+      this._filters = { ...this._filters, __search: value, __searchFields: searchFields };
     }
 
     if (this.storageKey) {
@@ -410,13 +411,15 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
       this._sortConfig = { field: saved.sort.field, direction: saved.sort.direction };
     }
 
-    const hash = window.location.hash.slice(1);
-    const params = new URLSearchParams(hash);
-    const urlSort = params.get('fv-sort');
-    if (urlSort) {
-      const [field, direction] = urlSort.split(':');
-      if (field && (direction === 'asc' || direction === 'desc')) {
-        this._sortConfig = { field, direction };
+    if (this.syncUrl) {
+      const hash = window.location.hash.slice(1);
+      const params = new URLSearchParams(hash);
+      const urlSort = params.get('fv-sort');
+      if (urlSort) {
+        const [field, direction] = urlSort.split(':');
+        if (field && (direction === 'asc' || direction === 'desc')) {
+          this._sortConfig = { field, direction };
+        }
       }
     }
 
