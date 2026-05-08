@@ -65,7 +65,7 @@ static styles = css`
   @property({ attribute: false }) fieldGrids: ColumnConfig<T>[] = [];
   @property({ attribute: false }) registers: T[] = [];
   @property({ attribute: false }) filteredData: T[] = [];
-  @property({ attribute: false }) currentSort: SortChangeDetail | null = null;
+  @property({ attribute: false }) currentSorts: SortCriterion[] = [];
   @property({ attribute: false }) currentFilters: Record<string, unknown> = {};
   @property({ attribute: false }) anchor: HTMLElement | null = null;
 
@@ -157,9 +157,9 @@ static styles = css`
       (this.registers as Record<string, unknown>[]).map(row => String(row[field] ?? ''))
     )].filter(v => v !== '').sort();
     const isAscActive =
-      this.currentSort?.field === field && this.currentSort?.direction === 'asc';
+      this.currentSorts.some(s => s.field === field && s.direction === 'asc');
     const isDescActive =
-      this.currentSort?.field === field && this.currentSort?.direction === 'desc';
+      this.currentSorts.some(s => s.field === field && s.direction === 'desc');
 
     return html`
       <div

@@ -541,9 +541,14 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
         <div class="controls">
           ${this.showSearch ? html`<fv-search placeholder="Search..." debounce></fv-search>` : ''}
           ${showSwitcher ? html`<fv-switcher .activeView=${activeView} .targetFor=${this.id} .acceptedViews=${acceptedViews}></fv-switcher>` : ''}
-          ${this.showSort ? html`<fv-sort-action internal-mode .currentSorts=${this._sortCriteria} .registerOrder=${this._fieldGrids}></fv-sort-action>` : ''}
-          ${this.showFilter ? html`<fv-filter-action internal-mode .field=${'__search__'} .currentFilters=${this._filters} .registers=${this._registers}></fv-filter-action>` : ''}
-          ${this.showExport ? html`<fv-export-action internal-mode .registers=${this._filteredData} .fieldGrids=${this._fieldGrids}></fv-export-action>` : ''}
+          ${this.showSort && this._shouldShowInternalActions() ? html`<fv-sort-action internal-mode .currentSorts=${this._sortCriteria} .registerOrder=${this._fieldGrids}></fv-sort-action>` : ''}
+          ${this.showFilter && this._shouldShowInternalActions() ? html`<fv-filter-action
+            internal-mode
+            .fieldList=${this._activeView === 'list' ? this._fieldRows : this._activeView === 'cards' ? this._fieldCards : this._fieldGrids}
+            .currentFilters=${this._filters}
+            .registers=${this._registers}
+          ></fv-filter-action>` : ''}
+          ${this.showExport && this._shouldShowInternalActions() ? html`<fv-export-action internal-mode .registers=${this._filteredData} .fieldGrids=${this._fieldGrids}></fv-export-action>` : ''}
         </div>
       ` : ''}
       ${this._renderView(data)}

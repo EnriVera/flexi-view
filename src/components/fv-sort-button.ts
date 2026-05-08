@@ -154,11 +154,13 @@ export class FvSortButton extends LitElement {
 
   render() {
     const icons = getFlexiConfig().icons;
-    const icon = this.direction === 'asc' ? icons.sortAsc : icons.sortDesc;
-    const safeIcon = icon || '<span>↕</span>';
-    const dirLabel = this.direction === 'asc' ? t().sort.asc : t().sort.desc;
+    const icon = this.direction === 'asc'
+      ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'
+      : '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
+    const safeIcon = icon;
+    const dirLabel = this.direction === 'asc' ? t().sort.ascLabel : t().sort.descLabel;
     const clearLabel = t().sort.clear ?? 'Clear sort';
-    const mainLabel = `${this._displayName()} - ${dirLabel}`;
+    const mainLabel = dirLabel;
 
     return html`
       <div class="chip" part="chip">
