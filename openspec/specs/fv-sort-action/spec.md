@@ -240,6 +240,89 @@ And neither is suppressed or coalesced
 
 ---
 
+## Additional Requirements (from change: inline-actions)
+
+### REQ-9 — Chip Style Redesign
+
+**REQ-9.1** The `fv-sort-action` component SHALL render as a minimalist chip with icon + label.
+
+**REQ-9.2** The chip SHALL use `display: inline-flex` so both main button and clear button form a unified compact control.
+
+**REQ-9.3** The chip height SHALL be approximately 32px.
+
+**REQ-9.4** The clear button SHALL only be present when `active === true`.
+
+---
+
+### REQ-10 — Internal Rendering Mode
+
+**REQ-10.1** When `internalMode` property is set, `fv-sort-action` SHALL render without `for` attribute handling.
+
+**REQ-10.2** The component SHALL NOT require a target view element when in internal mode.
+
+**REQ-10.3** The component SHALL operate in standalone mode suitable for internal insertion.
+
+**REQ-10.4** When in internal mode, the component SHALL accept `currentSorts` via property binding.
+
+---
+
+### REQ-11 — Direction Button Labels in Sort Modal
+
+**REQ-11.1** The sort modal direction buttons SHALL display only "Asc" or "Desc" text — no column name in the label.
+
+**REQ-11.2** The active direction button SHALL have distinct visual feedback (highlighted/filled state).
+
+---
+
+## Additional Acceptance Scenarios (from change: inline-actions)
+
+### Scenario 13 — Chip renders icon + label in inactive state
+
+```gherkin
+Given fv-sort-action with field="name" and active=false
+When component renders
+Then a single chip button appears with sort icon and "Sort" label
+And no clear button is present in DOM
+```
+
+### Scenario 14 — Chip shows clear button when active
+
+```gherkin
+Given fv-sort-action with field="name" and active=true
+When component renders
+Then the chip shows icon + label + clear (×) button
+And clear button is keyboard-focusable
+```
+
+### Scenario 15 — Main button cycles direction on click
+
+```gherkin
+Given fv-sort-action with field="name" direction="asc" active=true
+When user clicks the main button
+Then direction toggles to "desc"
+And sort-change event fires with new direction
+```
+
+### Scenario 16 — Internal mode renders independently
+
+```gherkin
+Given fv-sort-action with internalMode and no for attribute
+When component renders
+Then it functions without dispatching to a target view
+And all sort behavior (activate, cycle, clear) works correctly
+```
+
+### Scenario 17 — Modal direction buttons show only "Asc"/"Desc"
+
+```gherkin
+Given sort modal is open with a sort entry for field "name"
+When user views the direction control
+Then buttons show "Asc" and "Desc" (no field name)
+And active direction button is visually distinct
+```
+
+---
+
 ## Out of Scope (confirmed from proposal)
 
 - Multi-field / composite sort
