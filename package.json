@@ -1,6 +1,6 @@
 {
   "name": "flexi-view",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Framework-agnostic multi-view data library built with Web Components",
   "type": "module",
   "main": "dist/flexi-view.umd.js",
