@@ -22,7 +22,13 @@ export type ExportFormat = 'csv' | 'xlsx';
 
 export type Language = 'es' | 'en';
 
-export type SortChangeDetail = { field: string; direction: 'asc' | 'desc' | null };
+export interface SortCriterion {
+  field: string;
+  direction: 'asc' | 'desc';
+}
+export type FvSortCriterion = SortCriterion;
+
+export type SortChangeDetail = { sorts: SortCriterion[] };
 export type FvSortChangeDetail = SortChangeDetail;
 export type FilterChangeDetail = { field: string; value: unknown };
 export type FvFilterChangeDetail = { filters: Record<string, unknown> };
@@ -40,7 +46,7 @@ export interface HeaderMenuElement<T = Record<string, unknown>> {
   fieldGrids: ColumnConfig<T>[];
   registers: T[];
   filteredData: T[];
-  currentSort: SortChangeDetail | null;
+  currentSorts: SortCriterion[];
   currentFilters: Record<string, unknown>;
   anchor: HTMLElement | null;
   open(): void;

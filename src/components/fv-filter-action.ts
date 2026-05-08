@@ -1,31 +1,78 @@
 import { LitElement, html, css } from 'lit';
-import { customElement, property } from 'lit/decorators.js';
+import { customElement, property, state } from 'lit/decorators.js';
 import type { FilterChangeDetail } from '../types.js';
 import { subscribeConfig } from '../registry.js';
+import { t } from '../i18n/index.js';
+import './fv-filter-modal.js';
 
 @customElement('fv-filter-action')
 export class FvFilterAction extends LitElement {
   static styles = css`
-    :host { display: block; }
-    .option {
+    :host { display: inline-block; }
+
+    .chip {
+      display: inline-flex;
+      align-items: stretch;
+      border: 1px solid var(--fv-border, #e0e0e0);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--fv-text, #333);
+      font: inherit;
+    }
+
+    button.main {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 4px 2px;
-      cursor: pointer;
-      font-size: 13px;
-      border-radius: 4px;
-      user-select: none;
+      gap: 6px;
+      padding: 4px 10px;
+      font-weight: 500;
     }
-    .option:hover { background: var(--fv-row-hover, #f5f5f5); }
-    input[type='checkbox'] { cursor: pointer; accent-color: var(--fv-accent, #111); }
-    .empty { font-size: 12px; color: var(--fv-text-muted, #666); padding: 4px 0; }
+
+    button.main[aria-pressed='true'] {
+      background: var(--fv-accent, #111);
+      color: #fff;
+    }
+
+    button.main:hover { background: var(--fv-row-hover, #f5f5f5); }
+    button.main[aria-pressed='true']:hover { background: var(--fv-text-muted, #666); }
+
+    button.clear {
+      border-left: 1px solid var(--fv-border, #e0e0e0);
+      padding: 4px 8px;
+      line-height: 1;
+      font-size: 14px;
+      color: var(--fv-text-muted, #666);
+    }
+
+    button.main[aria-pressed='true'] + button.clear {
+      border-left-color: var(--fv-accent, #111);
+      color: rgba(255,255,255,0.8);
+      background: var(--fv-accent, #111);
+    }
+
+    button.clear:hover { background: var(--fv-row-hover, #f5f5f5); color: var(--fv-text, #333); }
+    button.main[aria-pressed='true'] + button.clear:hover { background: var(--fv-text-muted, #666); color: #fff; }
+
+    button:focus-visible {
+      outline: 2px solid var(--fv-accent, #111);
+      outline-offset: -2px;
+    }
   `;
 
   @property() field = '';
+  @property() label = '';
   @property({ attribute: false }) selected: string[] = [];
   @property({ attribute: false }) options: string[] = [];
   @property({ attribute: 'for' }) for?: string;
+
+  @state() private _modalOpen = false;
 
   private _unsubscribeConfig?: () => void;
   private _target: (HTMLElement & Record<string, unknown>) | null = null;
@@ -55,7 +102,6 @@ export class FvFilterAction extends LitElement {
     }
     this._target = target;
 
-    // Compute options from full registers dataset (one-shot at connect — v1 limitation)
     const registers = ((target as any).registers ?? []) as Record<string, unknown>[];
     const uniqueValues = [...new Set(
       registers
@@ -65,7 +111,6 @@ export class FvFilterAction extends LitElement {
     )];
     this.options = uniqueValues;
 
-    // Read initial selected from currentFilters
     const currentFilters = ((target as any).currentFilters ?? {}) as Record<string, unknown>;
     const initial = currentFilters[this.field];
     if (Array.isArray(initial)) {
@@ -74,7 +119,6 @@ export class FvFilterAction extends LitElement {
       this.selected = [String(initial)];
     }
 
-    // Subscribe to outbound filter events from fv-view
     this._onFilterChangeFromView = (e: Event) => {
       const { filters } = (e as CustomEvent<{ filters: Record<string, unknown> }>).detail;
       const value = filters[this.field];
@@ -103,43 +147,86 @@ export class FvFilterAction extends LitElement {
     this._disconnectExternal();
   }
 
+  private _displayName() {
+    if (this.label) return this.label;
+    return this.field.charAt(0).toUpperCase() + this.field.slice(1);
+  }
+
   render() {
-    if (!this.options.length) return html`<p class="empty">No values</p>`;
+    const i18n = t();
+    const hasFilter = this.selected.length > 0;
+    const displayName = this._displayName();
+    const buttonLabel = `${i18n.filter.title}: ${displayName}`;
+    const clearLabel = i18n.common.close ?? 'Clear filter';
+
     return html`
-      ${this.options.map(opt => html`
-        <label class="option">
-          <input
-            type="checkbox"
-            .checked=${this.selected.includes(opt)}
-            @change=${(e: Event) => this._onChange(opt, (e.target as HTMLInputElement).checked)}
-          />
-          ${opt}
-        </label>
-      `)}
+      <div class="chip" part="chip">
+        <button
+          class="main"
+          part="main"
+          aria-pressed=${String(hasFilter)}
+          title=${buttonLabel}
+          @click=${this._openModal}
+        >
+          <span>${buttonLabel}</span>
+        </button>
+        ${hasFilter ? html`
+          <button
+            class="clear"
+            part="clear"
+            aria-label=${clearLabel}
+            title=${clearLabel}
+            @click=${this._onClear}
+          >×</button>
+        ` : ''}
+      </div>
+
+      <fv-filter-modal
+        .field=${this.field}
+        .options=${this.options}
+        .selected=${this.selected}
+        .open=${this._modalOpen}
+        @filter-change=${this._onModalFilterChange}
+        @modal-close=${this._onModalClose}
+      ></fv-filter-modal>
     `;
   }
 
-  private _onChange(opt: string, checked: boolean) {
-    const next = checked
-      ? [...this.selected, opt]
-      : this.selected.filter(v => v !== opt);
+  private _openModal = () => {
+    this._modalOpen = true;
+  };
 
-    const detail: FilterChangeDetail = { field: this.field, value: next.length ? next : null };
-    this.dispatchEvent(
-      new CustomEvent<FilterChangeDetail>('filter-change', {
-        detail,
-        bubbles: true,
-        composed: true,
-      })
-    );
+  private _onModalClose = () => {
+    this._modalOpen = false;
+    this.updateComplete.then(() => {
+      this.renderRoot.querySelector<HTMLButtonElement>('button.main')?.focus();
+    });
+  };
+
+  private _onModalFilterChange = (e: Event) => {
+    e.stopPropagation();
+    const { value } = (e as CustomEvent<FilterChangeDetail>).detail;
+    this.selected = Array.isArray(value) ? value : (value != null ? [String(value)] : []);
+    this._modalOpen = false;
+    this._dispatch({ field: this.field, value: this.selected.length ? this.selected : null });
+  };
+
+  private _onClear = () => {
+    this.selected = [];
+    this._dispatch({ field: this.field, value: null });
+    this.updateComplete.then(() => {
+      this.renderRoot.querySelector<HTMLButtonElement>('button.main')?.focus();
+    });
+  };
+
+  private _dispatch(detail: FilterChangeDetail) {
+    this.dispatchEvent(new CustomEvent<FilterChangeDetail>('filter-change', {
+      detail, bubbles: true, composed: true,
+    }));
     if (this._target) {
-      this._target.dispatchEvent(
-        new CustomEvent<FilterChangeDetail>('filter-change', {
-          detail,
-          bubbles: false,
-          composed: false,
-        })
-      );
+      this._target.dispatchEvent(new CustomEvent<FilterChangeDetail>('filter-change', {
+        detail, bubbles: false, composed: false,
+      }));
     }
   }
 }

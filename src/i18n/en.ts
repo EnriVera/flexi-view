@@ -1,7 +1,11 @@
 export const en = {
   sort: {
+    title: 'Sort',
+    selectField: 'Select a field to sort',
     asc: 'Ascending',
     desc: 'Descending',
+    clear: 'Clear sort',
+    nSorts: (n: number) => n === 1 ? '1 sort' : `${n} sorts`,
   },
   view: {
     switch: 'Switch view',

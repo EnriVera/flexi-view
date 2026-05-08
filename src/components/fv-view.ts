@@ -1,10 +1,10 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
-import type { ColumnConfig, SortChangeDetail, FilterChangeDetail, FvFilterChangeDetail } from '../types.js';
+import type { ColumnConfig, SortChangeDetail, FilterChangeDetail, FvFilterChangeDetail, SortCriterion } from '../types.js';
 import type { FilterItem } from '../utils/persistence.js';
 import { applySort, applyFilters } from '../utils/sort-filter.js';
 import { readState, writeState, writeFilterToUrl, clearFilterFromUrl, readFiltersFromUrl } from '../utils/persistence.js';
-import { writeSortToUrl, clearSortFromUrl } from '../utils/persistence.js';
+import { writeSortToUrl, readSortFromUrl } from '../utils/persistence.js';
 import { getGridConfig } from '../registry.js';
 import './fv-header-menu.js';
 
@@ -50,7 +50,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     return views;
   }
 
-  get currentSort(): SortChangeDetail | null { return this._sortConfig; }
+  get currentSorts(): SortCriterion[] { return this._sortCriteria; }
   get currentFilters(): Record<string, unknown> { return this._filters; }
 
   private _emitStateEvent(name: string, detail: unknown) {
@@ -63,7 +63,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   private _lastStorageValue?: string;
   private _initialized = false;
   @state() private _filters: Record<string, unknown> = {};
-  @state() private _sortConfig: SortChangeDetail | null = null;
+  @state() private _sortCriteria: SortCriterion[] = [];
 
   private _headerMenu: HTMLElement | null = null;
 
@@ -129,9 +129,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
       const filter: FilterItem[] | null = Object.keys(this._filters).length > 0
         ? Object.entries(this._filters).map(([field, value]) => ({ field, value }))
         : null;
-      const sort = this._sortConfig?.direction != null
-        ? { field: this._sortConfig.field, direction: this._sortConfig.direction as 'asc' | 'desc' }
-        : null;
+      const sort = this._sortCriteria.length > 0 ? this._sortCriteria : null;
       const payload = { views: newView, sort, filter };
       writeState(this.storageKey, payload);
       this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
@@ -150,14 +148,9 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
 
   private _onSortChange = (e: Event) => {
     const detail = (e as CustomEvent<SortChangeDetail>).detail;
-    if (detail.direction === null) {
-      this._sortConfig = null;
-      if (this.syncUrl) clearSortFromUrl();
-    } else {
-      this._sortConfig = detail;
-      if (this.syncUrl) writeSortToUrl(detail.field, detail.direction);
-    }
-    this._emitStateEvent('fv-sort-change', this._sortConfig);
+    this._sortCriteria = detail?.sorts ? [...detail.sorts] : [];
+    if (this.syncUrl) writeSortToUrl(this._sortCriteria);
+    this._emitStateEvent('fv-sort-change', { sorts: this._sortCriteria });
     if (this.storageKey) {
       writeState(this.storageKey, this._persistPayload);
       this._lastStorageValue = localStorage.getItem(this.storageKey) || '';
@@ -238,7 +231,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
       filteredData: T[];
       fieldGrids: ColumnConfig<T>[];
       registers: Record<string, unknown>;
-      currentSort: SortChangeDetail | null;
+      currentSorts: SortCriterion[];
       currentFilters: Record<string, unknown>;
       anchor: HTMLElement | null;
       open(): void;
@@ -249,7 +242,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     menu.fieldGrids = this._fieldGrids;
     menu.registers = this._registers;
     menu.filteredData = this._processedData;
-    menu.currentSort = this._sortConfig;
+    menu.currentSorts = this._sortCriteria;
     menu.currentFilters = this._filters;
     menu.anchor = anchor;
 
@@ -270,8 +263,8 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     const filter: FilterItem[] | null = Object.keys(this._filters).length > 0
       ? Object.entries(this._filters).map(([field, value]) => ({ field, value }))
       : null;
-    const sort = this._sortConfig?.direction != null
-      ? { field: this._sortConfig.field, direction: this._sortConfig.direction as 'asc' | 'desc' }
+    const sort = this._sortCriteria.length > 0
+      ? { field: this._sortCriteria[0].field, direction: this._sortCriteria[0].direction }
       : null;
     return {
       views: this._activeView,
@@ -310,13 +303,10 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
         }
       }
     }
-    const urlSort = params.get('fv-sort');
-    if (urlSort) {
-      const [field, direction] = urlSort.split(':');
-      if (field && (direction === 'asc' || direction === 'desc')) {
-        this._sortConfig = { field, direction };
-        this._emitStateEvent('fv-sort-change', this._sortConfig);
-      }
+    const urlSorts = readSortFromUrl();
+    if (urlSorts.length > 0) {
+      this._sortCriteria = urlSorts;
+      this._emitStateEvent('fv-sort-change', { sorts: this._sortCriteria });
     }
   };
 
@@ -338,8 +328,8 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
         this._activeView = defaultView;
         this.view = defaultView;
         this._filters = {};
-        this._sortConfig = null;
-        this._emitStateEvent('fv-sort-change', this._sortConfig);
+        this._sortCriteria = [];
+        this._emitStateEvent('fv-sort-change', { sorts: [] });
         this._emitStateEvent('fv-filter-change', { filters: this._filters } as FvFilterChangeDetail);
         this.requestUpdate();
         return;
@@ -369,10 +359,10 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
             this._emitStateEvent('fv-filter-change', { filters: this._filters } as FvFilterChangeDetail);
           }
           if (saved.sort && typeof saved.sort === 'object') {
-            const { field, direction } = saved.sort;
+            const { field, direction } = saved.sort as { field: string; direction: 'asc' | 'desc' };
             if (field && (direction === 'asc' || direction === 'desc')) {
-              this._sortConfig = { field, direction };
-              this._emitStateEvent('fv-sort-change', this._sortConfig);
+              this._sortCriteria = [{ field, direction }];
+              this._emitStateEvent('fv-sort-change', { sorts: this._sortCriteria });
             }
           }
           this.requestUpdate();
@@ -424,18 +414,13 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     this.view = initialView;
 
     if (saved?.sort) {
-      this._sortConfig = { field: saved.sort.field, direction: saved.sort.direction };
+      this._sortCriteria = [{ field: saved.sort.field, direction: saved.sort.direction as 'asc' | 'desc' }];
     }
 
     if (this.syncUrl) {
-      const hash = window.location.hash.slice(1);
-      const params = new URLSearchParams(hash);
-      const urlSort = params.get('fv-sort');
-      if (urlSort) {
-        const [field, direction] = urlSort.split(':');
-        if (field && (direction === 'asc' || direction === 'desc')) {
-          this._sortConfig = { field, direction };
-        }
+      const urlSorts = readSortFromUrl();
+      if (urlSorts.length > 0) {
+        this._sortCriteria = urlSorts;
       }
     }
 
@@ -456,7 +441,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     }
 
     // Emit initial state so external action components can sync on connect
-    this._emitStateEvent('fv-sort-change', this._sortConfig);
+    this._emitStateEvent('fv-sort-change', { sorts: this._sortCriteria });
     this._emitStateEvent('fv-filter-change', { filters: this._filters } as FvFilterChangeDetail);
 
     if (this.syncUrl && !urlView) {
@@ -521,7 +506,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
   }
 
   private get _processedData(): T[] {
-    return applySort(applyFilters(this._registers, this._filters), this._sortConfig);
+    return applySort(applyFilters(this._registers, this._filters), this._sortCriteria);
   }
 
   render() {
@@ -568,7 +553,7 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
         return html`<fv-grid
           .registers=${data}
           .fieldGrids=${fieldGrids}
-          .currentSort=${this._sortConfig}
+          .currentSorts=${this._sortCriteria}
           .currentFilters=${this._filters}
         ></fv-grid>`;
     }

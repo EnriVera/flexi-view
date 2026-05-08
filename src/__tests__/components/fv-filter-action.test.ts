@@ -15,6 +15,14 @@ vi.stubGlobal('customElements', {
 import { _resetRegistryForTesting, configure, subscribeConfig } from '../../registry.js';
 import { FvFilterAction } from '../../components/fv-filter-action.js';
 
+function makeFilterChangeEvent(field: string, value: string[] | null) {
+  return new CustomEvent('filter-change', {
+    detail: { field, value },
+    bubbles: true,
+    composed: true,
+  });
+}
+
 function makeMockFilterTarget(overrides: Record<string, unknown> = {}) {
   const listeners = new Map<string, EventListenerOrEventListenerObject[]>();
   return {
@@ -38,68 +46,109 @@ describe('FvFilterAction', () => {
     adoptedStyleSheets.length = 0;
   });
 
-  it('dispatches filter-change with selected array when checking an option', () => {
+  it('_onModalFilterChange dispatches filter-change with selected values', () => {
     const el = new FvFilterAction();
     el.field = 'status';
-    el.options = ['active', 'inactive', 'pending'];
     el.selected = [];
     const spy = vi.spyOn(el, 'dispatchEvent');
 
-    (el as any)._onChange('active', true);
+    const event = makeFilterChangeEvent('status', ['active']);
+    event.stopPropagation = vi.fn();
+    (el as any)._onModalFilterChange(event);
 
     expect(spy).toHaveBeenCalledOnce();
-    const event = spy.mock.calls[0][0] as CustomEvent;
-    expect(event.type).toBe('filter-change');
-    expect(event.detail.field).toBe('status');
-    expect(event.detail.value).toEqual(['active']);
+    const dispatched = spy.mock.calls[0][0] as CustomEvent;
+    expect(dispatched.type).toBe('filter-change');
+    expect(dispatched.detail.field).toBe('status');
+    expect(dispatched.detail.value).toEqual(['active']);
+    expect(el.selected).toEqual(['active']);
   });
 
-  it('removes value from selected array when unchecking', () => {
+  it('_onModalFilterChange removes value from selected when fewer values', () => {
     const el = new FvFilterAction();
     el.field = 'status';
-    el.options = ['active', 'inactive', 'pending'];
     el.selected = ['active', 'inactive'];
     const spy = vi.spyOn(el, 'dispatchEvent');
 
-    (el as any)._onChange('active', false);
+    const event = makeFilterChangeEvent('status', ['inactive']);
+    event.stopPropagation = vi.fn();
+    (el as any)._onModalFilterChange(event);
 
-    const event = spy.mock.calls[0][0] as CustomEvent;
-    expect(event.detail.value).toEqual(['inactive']);
+    const dispatched = spy.mock.calls[0][0] as CustomEvent;
+    expect(dispatched.detail.value).toEqual(['inactive']);
+    expect(el.selected).toEqual(['inactive']);
   });
 
-  it('dispatches null when unchecking the last selected option', () => {
+  it('_onModalFilterChange dispatches null when value is null', () => {
     const el = new FvFilterAction();
     el.field = 'status';
-    el.options = ['active'];
     el.selected = ['active'];
     const spy = vi.spyOn(el, 'dispatchEvent');
 
-    (el as any)._onChange('active', false);
+    const event = makeFilterChangeEvent('status', null);
+    event.stopPropagation = vi.fn();
+    (el as any)._onModalFilterChange(event);
 
-    const event = spy.mock.calls[0][0] as CustomEvent;
-    expect(event.detail.value).toBeNull();
+    const dispatched = spy.mock.calls[0][0] as CustomEvent;
+    expect(dispatched.detail.value).toBeNull();
+    expect(el.selected).toEqual([]);
   });
 
-  it('accumulates multiple selections', () => {
+  it('_onModalFilterChange accumulates multiple selections', () => {
     const el = new FvFilterAction();
     el.field = 'role';
-    el.options = ['admin', 'user'];
     el.selected = ['admin'];
     const spy = vi.spyOn(el, 'dispatchEvent');
 
-    (el as any)._onChange('user', true);
+    const event = makeFilterChangeEvent('role', ['admin', 'user']);
+    event.stopPropagation = vi.fn();
+    (el as any)._onModalFilterChange(event);
 
-    const event = spy.mock.calls[0][0] as CustomEvent;
-    expect(event.detail.value).toEqual(['admin', 'user']);
+    const dispatched = spy.mock.calls[0][0] as CustomEvent;
+    expect(dispatched.detail.value).toEqual(['admin', 'user']);
   });
 
-  it('CSS .empty uses var(--fv-text-muted) not hardcoded #999', () => {
+  it('_onClear dispatches null and resets selected', () => {
+    const el = new FvFilterAction();
+    el.field = 'status';
+    el.selected = ['active', 'inactive'];
+    const spy = vi.spyOn(el, 'dispatchEvent');
+
+    (el as any)._onClear();
+
+    expect(spy).toHaveBeenCalledOnce();
+    const dispatched = spy.mock.calls[0][0] as CustomEvent;
+    expect(dispatched.type).toBe('filter-change');
+    expect(dispatched.detail.field).toBe('status');
+    expect(dispatched.detail.value).toBeNull();
+    expect(el.selected).toEqual([]);
+  });
+
+  it('_openModal sets _modalOpen to true', () => {
+    const el = new FvFilterAction();
+    expect((el as any)._modalOpen).toBe(false);
+
+    (el as any)._openModal();
+
+    expect((el as any)._modalOpen).toBe(true);
+  });
+
+  it('_onModalClose sets _modalOpen to false', () => {
+    const el = new FvFilterAction();
+    (el as any)._modalOpen = true;
+
+    (el as any)._onModalClose();
+
+    expect((el as any)._modalOpen).toBe(false);
+  });
+
+  it('CSS uses var(--fv-text-muted) not hardcoded #999', () => {
     const styles = FvFilterAction.styles.toString();
     expect(styles).toContain('var(--fv-text-muted');
     expect(styles).not.toContain('#999');
   });
 
-  describe('external mode — for attribute (T4)', () => {
+  describe('external mode — for attribute', () => {
     it('has a for property that defaults to undefined', () => {
       const el = new FvFilterAction();
       expect((el as any).for).toBeUndefined();
@@ -110,7 +159,7 @@ describe('FvFilterAction', () => {
         registers: [
           { status: 'active' },
           { status: 'inactive' },
-          { status: 'active' }, // duplicate — should deduplicate
+          { status: 'active' },
         ],
         currentFilters: {},
       });
@@ -126,7 +175,7 @@ describe('FvFilterAction', () => {
 
       expect(el.options).toContain('active');
       expect(el.options).toContain('inactive');
-      expect(el.options).toHaveLength(2); // deduped
+      expect(el.options).toHaveLength(2);
     });
 
     it('reads initial selected from target.currentFilters[field]', async () => {
@@ -148,10 +197,7 @@ describe('FvFilterAction', () => {
     });
 
     it('subscribes to fv-filter-change on target', async () => {
-      const target = makeMockFilterTarget({
-        registers: [],
-        currentFilters: {},
-      });
+      const target = makeMockFilterTarget({ registers: [], currentFilters: {} });
       vi.stubGlobal('document', {
         adoptedStyleSheets,
         getElementById: vi.fn().mockReturnValue(target),
@@ -165,7 +211,7 @@ describe('FvFilterAction', () => {
       expect(target.addEventListener).toHaveBeenCalledWith('fv-filter-change', expect.any(Function));
     });
 
-    it('dispatches filter-change on self AND on target when _onChange fires in external mode', async () => {
+    it('_onClear forwards null to target in external mode', async () => {
       const target = makeMockFilterTarget({
         registers: [{ status: 'active' }],
         currentFilters: {},
@@ -177,30 +223,26 @@ describe('FvFilterAction', () => {
 
       const el = new FvFilterAction();
       el.field = 'status';
-      el.selected = [];
+      el.selected = ['active'];
       (el as any).for = 'my-view';
       await (el as any)._connect();
 
       const selfSpy = vi.spyOn(el, 'dispatchEvent');
-      (el as any)._onChange('active', true);
+      (el as any)._onClear();
 
-      // Self dispatch
       expect(selfSpy).toHaveBeenCalledOnce();
       const selfEvent = selfSpy.mock.calls[0][0] as CustomEvent;
       expect(selfEvent.type).toBe('filter-change');
 
-      // Target dispatch
       expect(target.dispatchEvent).toHaveBeenCalledOnce();
       const targetEvent = (target.dispatchEvent as any).mock.calls[0][0] as CustomEvent;
       expect(targetEvent.type).toBe('filter-change');
       expect(targetEvent.bubbles).toBe(false);
+      expect(targetEvent.detail.value).toBeNull();
     });
 
     it('disconnectedCallback removes fv-filter-change listener from target', async () => {
-      const target = makeMockFilterTarget({
-        registers: [],
-        currentFilters: {},
-      });
+      const target = makeMockFilterTarget({ registers: [], currentFilters: {} });
       vi.stubGlobal('document', {
         adoptedStyleSheets,
         getElementById: vi.fn().mockReturnValue(target),

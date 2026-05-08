@@ -5,7 +5,7 @@ export interface SortState {
 
 export interface PersistedState {
   views: string | null;
-  sort: SortState | null;
+  sort: SortState[] | null;
   filter: FilterItem[] | null;
 }
 
@@ -25,7 +25,7 @@ export function readState(key: string | undefined): PersistedState | null {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const sort = _parseSortField(parsed);
+    const sort = _parseSortState(parsed);
     return {
       views: (parsed.views as string | null) ?? null,
       sort,
@@ -36,12 +36,28 @@ export function readState(key: string | undefined): PersistedState | null {
   }
 }
 
-function _parseSortField(parsed: Record<string, unknown>): SortState | null {
-  if (parsed.sort && typeof parsed.sort === 'object') {
+function _parseSortState(parsed: Record<string, unknown>): SortState[] | null {
+  if (!parsed.sort) return null;
+  // Legacy single-object format: wrap in array
+  if (typeof parsed.sort === 'object' && !Array.isArray(parsed.sort)) {
     const s = parsed.sort as Record<string, unknown>;
     if (typeof s.field === 'string' && (s.direction === 'asc' || s.direction === 'desc')) {
-      return { field: s.field, direction: s.direction };
+      return [{ field: s.field, direction: s.direction }];
     }
+    return null;
+  }
+  // New array format
+  if (Array.isArray(parsed.sort)) {
+    const result: SortState[] = [];
+    for (const item of parsed.sort) {
+      if (typeof item === 'object' && item !== null) {
+        const s = item as Record<string, unknown>;
+        if (typeof s.field === 'string' && (s.direction === 'asc' || s.direction === 'desc')) {
+          result.push({ field: s.field, direction: s.direction });
+        }
+      }
+    }
+    return result.length > 0 ? result : null;
   }
   return null;
 }
@@ -56,27 +72,35 @@ function _setHashParams(params: URLSearchParams): void {
   window.location.hash = '#' + params.toString();
 }
 
-export function writeSortToUrl(field: string, direction: 'asc' | 'desc'): void {
+export function writeSortToUrl(sorts: SortState[]): void {
   const params = _getHashParams();
-  params.set('fv-sort', `${field}:${direction}`);
+  if (sorts.length === 0) {
+    params.delete('fv-sort');
+  } else {
+    const encoded = sorts
+      .map(s => `${encodeURIComponent(s.field)}:${s.direction}`)
+      .join(',');
+    params.set('fv-sort', encoded);
+  }
   _setHashParams(params);
 }
 
-export function clearSortFromUrl(): void {
-  const params = _getHashParams();
-  params.delete('fv-sort');
-  _setHashParams(params);
-}
-
-export function readSortFromUrl(): SortState | null {
+export function readSortFromUrl(): SortState[] {
   const params = _getHashParams();
   const raw = params.get('fv-sort');
-  if (!raw) return null;
-  const [field, direction] = raw.split(':');
-  if (field && (direction === 'asc' || direction === 'desc')) {
-    return { field, direction };
+  if (!raw) return [];
+  const tokens = raw.split(',');
+  const result: SortState[] = [];
+  for (const token of tokens) {
+    const lastColon = token.lastIndexOf(':');
+    if (lastColon === -1) continue;
+    const field = decodeURIComponent(token.slice(0, lastColon));
+    const direction = token.slice(lastColon + 1) as 'asc' | 'desc';
+    if (direction === 'asc' || direction === 'desc') {
+      result.push({ field, direction });
+    }
   }
-  return null;
+  return result;
 }
 
 export function writeFilterToUrl(field: string, value: string): void {

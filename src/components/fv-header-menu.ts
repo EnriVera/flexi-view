@@ -4,7 +4,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import type { ColumnConfig, SortChangeDetail, FilterChangeDetail, HeaderMenuElement } from '../types.js';
 import { subscribeConfig, getFlexiConfig } from '../registry.js';
 import { t } from '../i18n/index.js';
-import './fv-sort-action.js';
+import './fv-sort-button.js';
 import './fv-filter-action.js';
 import './fv-filter-modal.js';
 import './fv-export-action.js';
@@ -168,18 +168,18 @@ static styles = css`
         @click=${(e: Event) => e.stopPropagation()}
       >
         <div class="menu-section">
-          <fv-sort-action
+          <fv-sort-button
             field=${field}
             direction="asc"
             ?active=${isAscActive}
             @sort-change=${this._onSortChange}
-          ></fv-sort-action>
-          <fv-sort-action
+          ></fv-sort-button>
+          <fv-sort-button
             field=${field}
             direction="desc"
             ?active=${isDescActive}
             @sort-change=${this._onSortChange}
-          ></fv-sort-action>
+          ></fv-sort-button>
         </div>
         <div class="menu-section">
           <button class="see-all-btn" @click=${this._openFilterModal}>
