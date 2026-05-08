@@ -71,6 +71,9 @@ export class FvFilterAction extends LitElement {
   @property({ attribute: false }) selected: string[] = [];
   @property({ attribute: false }) options: string[] = [];
   @property({ attribute: 'for' }) for?: string;
+  @property({ type: Boolean, attribute: 'internal-mode' }) internalMode = false;
+  @property({ attribute: false }) currentFilters: Record<string, unknown> = {};
+  @property({ attribute: false }) registers: Record<string, unknown>[] = [];
 
   @state() private _modalOpen = false;
 
@@ -84,8 +87,39 @@ export class FvFilterAction extends LitElement {
   }
 
   firstUpdated() {
-    if (this.for) {
+    if (this.internalMode) {
+      // Internal mode: derive options from registers property
+      this._deriveOptionsFromRegisters();
+    } else if (this.for) {
       this._connect();
+    }
+  }
+
+  updated(changed: Map<string, unknown>) {
+    if (this.internalMode && changed.has('registers')) {
+      this._deriveOptionsFromRegisters();
+    }
+  }
+
+  private _deriveOptionsFromRegisters() {
+    if (!this.registers || this.registers.length === 0) return;
+    const field = this.field;
+    const uniqueValues = [...new Set(
+      (this.registers as Record<string, unknown>[])
+        .map(r => r[field])
+        .filter(v => v != null)
+        .map(String)
+    )];
+    this.options = uniqueValues;
+
+    // Derive initial selected from currentFilters if provided
+    if (this.currentFilters && field in this.currentFilters) {
+      const value = this.currentFilters[field];
+      if (Array.isArray(value)) {
+        this.selected = value.map(String);
+      } else if (value != null) {
+        this.selected = [String(value)];
+      }
     }
   }
 

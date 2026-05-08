@@ -59,6 +59,8 @@ export class FvSortAction extends LitElement {
   private _registerOrder: SortField[] = [];
 
   @property({ attribute: 'for' }) for?: string;
+  @property({ type: Boolean, attribute: 'internal-mode' }) internalMode = false;
+  @property({ attribute: false }) currentSorts: SortCriterion[] = [];
   @property({ attribute: 'storage-key' }) storageKey?: string;
   @property({ type: Boolean, attribute: 'sync-url' }) syncUrl = false;
 
@@ -75,7 +77,7 @@ export class FvSortAction extends LitElement {
   connectedCallback() {
     super.connectedCallback();
     this._unsubscribeConfig = subscribeConfig(() => this.requestUpdate());
-    if (this.for) this._connect();
+    if (this.for && !this.internalMode) this._connect();
   }
 
   private async _connect() {
@@ -188,16 +190,15 @@ export class FvSortAction extends LitElement {
     if (this._keydownHandler) document.removeEventListener('keydown', this._keydownHandler, true);
   }
 
-  // Chip label per spec: 0 sorts → title, 1 sort → "field - dir", N>=2 → "firstField +N-1"
+  // Chip label per spec: 0 sorts → title, 1 sort → dirLabel only, N>=2 → "firstField +N-1"
   private _chipLabel(): string {
     const i18n = t();
     const count = this._activeSorts.length;
     if (count === 0) return i18n.sort.title ?? 'Sort';
     if (count === 1) {
       const s = this._activeSorts[0];
-      const fieldTitle = this._registerOrder.find(f => f.field === s.field)?.title ?? s.field;
-      const dirLabel = s.direction === 'asc' ? (i18n.sort.asc ?? 'Ascending') : (i18n.sort.desc ?? 'Descending');
-      return `${fieldTitle} - ${dirLabel}`;
+      const dirLabel = s.direction === 'asc' ? '↑ Asc' : '↓ Desc';
+      return dirLabel;
     }
     // N >= 2
     const firstTitle = this._registerOrder.find(f => f.field === this._activeSorts[0].field)?.title ?? this._activeSorts[0].field;
@@ -260,7 +261,7 @@ export class FvSortAction extends LitElement {
                     aria-pressed=${String(this._activeSorts.some(s => s.field === this._selectedField && s.direction === 'asc'))}
                     @click=${() => this._onApply('asc')}
                   >
-                    ${unsafeHTML(icons.sortAsc || '↑')} ${i18n.sort.asc}
+                    ${unsafeHTML(icons.sortAsc || '↑')} Asc
                   </button>
                   <button
                     class="dir-btn desc"
@@ -268,7 +269,7 @@ export class FvSortAction extends LitElement {
                     aria-pressed=${String(this._activeSorts.some(s => s.field === this._selectedField && s.direction === 'desc'))}
                     @click=${() => this._onApply('desc')}
                   >
-                    ${unsafeHTML(icons.sortDesc || '↓')} ${i18n.sort.desc}
+                    ${unsafeHTML(icons.sortDesc || '↓')} Desc
                   </button>
                 ` : html`<p class="empty">${i18n.sort.selectField ?? 'Select a field to sort'}</p>`}
               </div>

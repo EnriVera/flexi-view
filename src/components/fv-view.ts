@@ -38,6 +38,9 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
 
   @property({ type: Boolean }) showSwitcher = true;
   @property({ type: Boolean, attribute: 'show-search' }) showSearch = true;
+  @property({ type: Boolean }) showSort = false;
+  @property({ type: Boolean }) showFilter = false;
+  @property({ type: Boolean }) showExport = false;
 
   // Public getters para que header-menu acceda a datos filtrados
   get filteredData(): T[] { return this._processedData; }
@@ -509,6 +512,10 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     return applySort(applyFilters(this._registers, this._filters), this._sortCriteria);
   }
 
+  private _shouldShowInternalActions(): boolean {
+    return this._activeView !== 'grid' && (this.showSort || this.showFilter || this.showExport);
+  }
+
   render() {
     const data = this._processedData;
 
@@ -530,10 +537,13 @@ export class FvView<T = Record<string, unknown>> extends LitElement {
     const showSwitcher = this.showSwitcher && acceptedViews.length > 1;
 
     return html`
-      ${this.showSearch || showSwitcher ? html`
+      ${this.showSearch || showSwitcher || this._shouldShowInternalActions() ? html`
         <div class="controls">
           ${this.showSearch ? html`<fv-search placeholder="Search..." debounce></fv-search>` : ''}
           ${showSwitcher ? html`<fv-switcher .activeView=${activeView} .targetFor=${this.id} .acceptedViews=${acceptedViews}></fv-switcher>` : ''}
+          ${this.showSort ? html`<fv-sort-action internal-mode .currentSorts=${this._sortCriteria} .registerOrder=${this._fieldGrids}></fv-sort-action>` : ''}
+          ${this.showFilter ? html`<fv-filter-action internal-mode .field=${'__search__'} .currentFilters=${this._filters} .registers=${this._registers}></fv-filter-action>` : ''}
+          ${this.showExport ? html`<fv-export-action internal-mode .registers=${this._filteredData} .fieldGrids=${this._fieldGrids}></fv-export-action>` : ''}
         </div>
       ` : ''}
       ${this._renderView(data)}

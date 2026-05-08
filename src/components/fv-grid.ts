@@ -1,6 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
-import type { ColumnConfig, SortChangeDetail, FilterChangeDetail } from '../types.js';
+import type { ColumnConfig, SortCriterion, FilterChangeDetail } from '../types.js';
 import { resolveControl } from '../registry.js';
 
 @customElement('fv-grid')
@@ -64,7 +64,7 @@ export class FvGrid<T = Record<string, unknown>> extends LitElement {
 
   @property({ attribute: false }) registers: T[] = [];
   @property({ attribute: false }) fieldGrids: ColumnConfig<T>[] = [];
-  @property({ attribute: false }) currentSort: SortChangeDetail | null = null;
+  @property({ attribute: false }) currentSorts: SortCriterion[] = [];
   @property({ attribute: false }) currentFilters: Record<string, unknown> = {};
 
   updated(changed: Map<string, unknown>) {
@@ -90,12 +90,13 @@ export class FvGrid<T = Record<string, unknown>> extends LitElement {
 
   private _renderHeader(col: ColumnConfig<T>) {
     const field = col.field != null ? String(col.field) : col.title;
-    const isSorted = this.currentSort?.field === field && this.currentSort?.direction != null;
+    const sortEntry = this.currentSorts.find(s => s.field === field);
+    const isSorted = !!sortEntry;
     const hasFilter = this.currentFilters[field] != null && this.currentFilters[field] !== undefined;
 
     const sortClass = isSorted ? 'sorted' : '';
     const sortIndicator = isSorted
-      ? (this.currentSort!.direction === 'asc' ? '↑' : '↓')
+      ? (sortEntry!.direction === 'asc' ? '↑' : '↓')
       : '';
     const filterIndicator = hasFilter ? '●' : '';
 

@@ -12,12 +12,12 @@ describe('FvGrid', () => {
   });
 
   describe('stateless props', () => {
-    it('accepts currentSort as a prop without error', () => {
+    it('accepts currentSorts as a prop without error', () => {
       const el = new FvGrid();
       expect(() => {
-        el.currentSort = { field: 'name', direction: 'asc' };
+        el.currentSorts = [{ field: 'name', direction: 'asc' }];
       }).not.toThrow();
-      expect(el.currentSort?.field).toBe('name');
+      expect(el.currentSorts[0]?.field).toBe('name');
     });
 
     it('accepts currentFilters as a prop without error', () => {
@@ -34,9 +34,9 @@ describe('FvGrid', () => {
       expect((el as any)._sortDir).toBeUndefined();
     });
 
-    it('currentSort defaults to null', () => {
+    it('currentSorts defaults to empty array', () => {
       const el = new FvGrid();
-      expect(el.currentSort).toBeNull();
+      expect(el.currentSorts).toEqual([]);
     });
   });
 

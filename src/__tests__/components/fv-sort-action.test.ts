@@ -70,12 +70,12 @@ describe('FvSortAction (modal trigger)', () => {
   // ─── 2. Chip rendering — active state (1 sort) ───────────────────────────
 
   describe('Chip rendering — active (1 sort)', () => {
-    it('label shows field title and direction for single sort', () => {
+    it('label shows direction only for single sort', () => {
       const el = new FvSortAction();
       el.registerOrder = [{ field: 'name', title: 'Name' }, { field: 'age', title: 'Age' }];
       (el as any)._activeSorts = [{ field: 'name', direction: 'asc' }];
       const label = (el as any)._chipLabel();
-      expect(label).toBe('Name - Ascending');
+      expect(label).toBe('↑ Asc');
     });
 
     it('aria-pressed is true when one sort', () => {
