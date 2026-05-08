@@ -7,33 +7,80 @@ const items = [
   { name: 'Bob', age: 35, status: 'active' },
 ];
 
-describe('applySort', () => {
-  it('sorts asc', () => {
-    const result = applySort(items, { field: 'name', direction: 'asc' });
+describe('applySort — multi-criterion', () => {
+  it('returns same reference when sorts is empty', () => {
+    const result = applySort(items, []);
+    expect(result).toBe(items);
+  });
+
+  it('sorts asc with single criterion', () => {
+    const result = applySort(items, [{ field: 'name', direction: 'asc' }]);
     expect(result.map(r => r.name)).toEqual(['Alice', 'Bob', 'Charlie']);
   });
 
-  it('sorts desc', () => {
-    const result = applySort(items, { field: 'name', direction: 'desc' });
+  it('sorts desc with single criterion', () => {
+    const result = applySort(items, [{ field: 'name', direction: 'desc' }]);
     expect(result.map(r => r.name)).toEqual(['Charlie', 'Bob', 'Alice']);
-  });
-
-  it('toggles asc → desc', () => {
-    const asc = applySort(items, { field: 'age', direction: 'asc' });
-    const desc = applySort(items, { field: 'age', direction: 'desc' });
-    expect(asc[0].age).toBe(25);
-    expect(desc[0].age).toBe(35);
-  });
-
-  it('returns original order when config is null', () => {
-    const result = applySort(items, null);
-    expect(result).toEqual(items);
   });
 
   it('does not mutate original array', () => {
     const copy = [...items];
-    applySort(items, { field: 'name', direction: 'asc' });
+    applySort(items, [{ field: 'name', direction: 'asc' }]);
     expect(items).toEqual(copy);
+  });
+
+  it('applies tiebreak with two-criterion sort', () => {
+    const data = [
+      { role: 'admin', name: 'Charlie' },
+      { role: 'admin', name: 'Alice' },
+      { role: 'user', name: 'Bob' },
+    ];
+    const result = applySort(data, [
+      { field: 'role', direction: 'asc' },
+      { field: 'name', direction: 'desc' },
+    ]);
+    // admin role asc, then name desc within same role: Z→A
+    expect(result.map(r => r.name)).toEqual(['Charlie', 'Alice', 'Bob']);
+  });
+
+  it('null/undefined sort first in asc direction', () => {
+    const data = [
+      { name: 'Bob', age: null },
+      { name: 'Alice', age: 25 },
+      { name: 'Carol', age: undefined },
+    ];
+    const result = applySort(data, [{ field: 'age', direction: 'asc' }]);
+    expect(result[0].name).toBe('Bob'); // null first
+    expect(result[1].name).toBe('Carol'); // undefined second
+    expect(result[2].name).toBe('Alice'); // defined last
+  });
+
+  it('null/undefined sort first in desc direction', () => {
+    const data = [
+      { name: 'Bob', age: null },
+      { name: 'Alice', age: 25 },
+      { name: 'Carol', age: undefined },
+    ];
+    const result = applySort(data, [{ field: 'age', direction: 'desc' }]);
+    expect(result[0].name).toBe('Bob'); // null first even in desc!
+    expect(result[1].name).toBe('Carol');
+    expect(result[2].name).toBe('Alice');
+  });
+
+  it('cascades three criteria', () => {
+    const data = [
+      { a: 'x', b: 'b', c: 3 },
+      { a: 'x', b: 'a', c: 1 },
+      { a: 'x', b: 'a', c: 2 },
+      { a: 'y', b: 'a', c: 0 },
+    ];
+    const result = applySort(data, [
+      { field: 'a', direction: 'asc' },
+      { field: 'b', direction: 'asc' },
+      { field: 'c', direction: 'asc' },
+    ]);
+    // a=x items before a=y (a asc); within a=x: b=a before b=b (b asc); within b=a: c asc
+    expect(result.map(r => `${r.a}${r.b}${r.c}`)).toEqual(['xa1', 'xa2', 'xb3', 'ya0']);
   });
 });
 

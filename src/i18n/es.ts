@@ -2,8 +2,14 @@ import type { Translations } from './en.js';
 
 export const es: Translations = {
   sort: {
+    title: 'Ordenar',
+    selectField: 'Seleccioná un campo para ordenar',
     asc: 'Ascendente',
+    ascLabel: 'Asc',
     desc: 'Descendente',
+    descLabel: 'Desc',
+    clear: 'Quitar orden',
+    nSorts: (n: number) => n === 1 ? '1 ordenamiento' : `${n} ordenamientos`,
   },
   view: {
     switch: 'Cambiar vista',

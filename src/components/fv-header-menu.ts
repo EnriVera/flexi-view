@@ -4,7 +4,7 @@ import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import type { ColumnConfig, SortChangeDetail, FilterChangeDetail, HeaderMenuElement } from '../types.js';
 import { subscribeConfig, getFlexiConfig } from '../registry.js';
 import { t } from '../i18n/index.js';
-import './fv-sort-action.js';
+import './fv-sort-button.js';
 import './fv-filter-action.js';
 import './fv-filter-modal.js';
 import './fv-export-action.js';
@@ -62,10 +62,10 @@ static styles = css`
   `;
 
   @property({ attribute: false }) column: ColumnConfig<T> = { title: '' };
-  @property({ attribute: false }) columns: ColumnConfig<T>[] = [];
-  @property({ attribute: false }) data: T[] = [];
+  @property({ attribute: false }) fieldGrids: ColumnConfig<T>[] = [];
+  @property({ attribute: false }) registers: T[] = [];
   @property({ attribute: false }) filteredData: T[] = [];
-  @property({ attribute: false }) currentSort: SortChangeDetail | null = null;
+  @property({ attribute: false }) currentSorts: SortCriterion[] = [];
   @property({ attribute: false }) currentFilters: Record<string, unknown> = {};
   @property({ attribute: false }) anchor: HTMLElement | null = null;
 
@@ -107,7 +107,7 @@ static styles = css`
     const field = this.column.field != null ? String(this.column.field) : this.column.title;
     const currentSelected = (this.currentFilters[field] as string[] | undefined) ?? [];
     const uniqueOptions = [...new Set(
-      (this.data as Record<string, unknown>[]).map(row => String(row[field] ?? ''))
+      (this.registers as Record<string, unknown>[]).map(row => String(row[field] ?? ''))
     )].filter(v => v !== '').sort();
 
     const modal = document.createElement('fv-filter-modal') as HTMLElement & {
@@ -140,11 +140,11 @@ static styles = css`
   }
 
   private get _allColumns(): ColumnConfig<T>[] {
-    return this.columns?.length > 0 ? this.columns : [this.column];
+    return this.fieldGrids?.length > 0 ? this.fieldGrids : [this.column];
   }
 
   private get _dataForExport(): T[] {
-    return this.filteredData?.length > 0 ? this.filteredData : this.data;
+    return this.filteredData?.length > 0 ? this.filteredData : this.registers;
   }
 
   render() {
@@ -154,12 +154,12 @@ static styles = css`
     const field = this.column.field != null ? String(this.column.field) : this.column.title;
     const currentSelected = (this.currentFilters[field] as string[] | undefined) ?? [];
     const uniqueOptions = [...new Set(
-      (this.data as Record<string, unknown>[]).map(row => String(row[field] ?? ''))
+      (this.registers as Record<string, unknown>[]).map(row => String(row[field] ?? ''))
     )].filter(v => v !== '').sort();
     const isAscActive =
-      this.currentSort?.field === field && this.currentSort?.direction === 'asc';
+      this.currentSorts.some(s => s.field === field && s.direction === 'asc');
     const isDescActive =
-      this.currentSort?.field === field && this.currentSort?.direction === 'desc';
+      this.currentSorts.some(s => s.field === field && s.direction === 'desc');
 
     return html`
       <div
@@ -168,18 +168,18 @@ static styles = css`
         @click=${(e: Event) => e.stopPropagation()}
       >
         <div class="menu-section">
-          <fv-sort-action
+          <fv-sort-button
             field=${field}
             direction="asc"
             ?active=${isAscActive}
             @sort-change=${this._onSortChange}
-          ></fv-sort-action>
-          <fv-sort-action
+          ></fv-sort-button>
+          <fv-sort-button
             field=${field}
             direction="desc"
             ?active=${isDescActive}
             @sort-change=${this._onSortChange}
-          ></fv-sort-action>
+          ></fv-sort-button>
         </div>
         <div class="menu-section">
           <button class="see-all-btn" @click=${this._openFilterModal}>
@@ -196,8 +196,8 @@ static styles = css`
           <fv-export-action
             format="csv"
             filename="data"
-            .data=${this._dataForExport as Record<string, unknown>[]}
-            .columns=${this._allColumns as ColumnConfig[]}
+            .registers=${this._dataForExport as Record<string, unknown>[]}
+            .fieldGrids=${this._allColumns as ColumnConfig[]}
             @fv-export-request=${this._onExportRequest}
           ></fv-export-action>
         </div>

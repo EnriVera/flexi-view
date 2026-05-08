@@ -3,7 +3,6 @@ import {
   readState,
   writeState,
   writeSortToUrl,
-  clearSortFromUrl,
   readSortFromUrl,
   writeFilterToUrl,
   readFiltersFromUrl,
@@ -17,10 +16,11 @@ describe('persistence — writeState / readState', () => {
   });
 
   it('writes and reads state with new sort shape', () => {
-    writeState(KEY, { views: 'grid', sort: { field: 'name', direction: 'asc' }, filter: null });
+    writeState(KEY, { views: 'grid', sort: [{ field: 'name', direction: 'asc' }], filter: null });
     const state = readState(KEY);
-    expect(state?.sort?.field).toBe('name');
-    expect(state?.sort?.direction).toBe('asc');
+    expect(state?.sort).toHaveLength(1);
+    expect(state?.sort?.[0].field).toBe('name');
+    expect(state?.sort?.[0].direction).toBe('asc');
   });
 
   it('reads state with null sort', () => {
@@ -62,45 +62,100 @@ describe('persistence — writeState / readState', () => {
 
   it('overwrites existing state on write', () => {
     writeState(KEY, { views: 'grid', sort: null, filter: null });
-    writeState(KEY, { views: 'cards', sort: { field: 'age', direction: 'desc' }, filter: null });
+    writeState(KEY, { views: 'cards', sort: [{ field: 'age', direction: 'desc' }], filter: null });
     const state = readState(KEY);
     expect(state?.views).toBe('cards');
-    expect(state?.sort?.direction).toBe('desc');
+    expect(state?.sort?.[0].direction).toBe('desc');
   });
 });
 
-describe('URL sort sync', () => {
+describe('URL sort sync — multi-sort', () => {
   beforeEach(() => {
     vi.stubGlobal('window', {
       location: { hash: '#' },
     });
   });
 
-  it('writeSortToUrl sets fv-sort param in hash', () => {
+  it('writeSortToUrl encodes single sort as field:direction', () => {
     window.location.hash = '#';
-    writeSortToUrl('name', 'asc');
+    writeSortToUrl([{ field: 'name', direction: 'asc' }]);
     const params = new URLSearchParams(window.location.hash.slice(1));
     expect(params.get('fv-sort')).toBe('name:asc');
   });
 
-  it('clearSortFromUrl removes fv-sort param', () => {
-    window.location.hash = '#fv-sort=name%3Aasc';
-    clearSortFromUrl();
+  it('writeSortToUrl encodes multiple sorts as comma-separated', () => {
+    window.location.hash = '#';
+    writeSortToUrl([
+      { field: 'role', direction: 'asc' },
+      { field: 'name', direction: 'desc' },
+    ]);
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    expect(params.get('fv-sort')).toBe('role:asc,name:desc');
+  });
+
+  it('writeSortToUrl with empty array clears the param', () => {
+    window.location.hash = '#fv-sort=role:asc,name:desc';
+    writeSortToUrl([]);
     const params = new URLSearchParams(window.location.hash.slice(1));
     expect(params.get('fv-sort')).toBeNull();
   });
 
-  it('readSortFromUrl parses field and direction', () => {
+  it('readSortFromUrl decodes single sort as length-1 array', () => {
     window.location.hash = '#fv-sort=age%3Adesc';
-    const sort = readSortFromUrl();
-    expect(sort?.field).toBe('age');
-    expect(sort?.direction).toBe('desc');
+    const sorts = readSortFromUrl();
+    expect(sorts).toHaveLength(1);
+    expect(sorts[0].field).toBe('age');
+    expect(sorts[0].direction).toBe('desc');
   });
 
-  it('readSortFromUrl returns null when no param', () => {
+  it('readSortFromUrl decodes comma-separated multi-sort', () => {
+    window.location.hash = '#fv-sort=role%3Aasc,name%3Adesc';
+    const sorts = readSortFromUrl();
+    expect(sorts).toHaveLength(2);
+    expect(sorts[0].field).toBe('role');
+    expect(sorts[0].direction).toBe('asc');
+    expect(sorts[1].field).toBe('name');
+    expect(sorts[1].direction).toBe('desc');
+  });
+
+  it('readSortFromUrl parses legacy single-criterion as length-1 array', () => {
+    window.location.hash = '#fv-sort=name%3Aasc';
+    const sorts = readSortFromUrl();
+    expect(sorts).toHaveLength(1);
+    expect(sorts[0].field).toBe('name');
+    expect(sorts[0].direction).toBe('asc');
+  });
+
+  it('readSortFromUrl drops invalid tokens silently', () => {
+    window.location.hash = '#fv-sort=role%3Aasc,badtoken,name%3Adesc';
+    const sorts = readSortFromUrl();
+    expect(sorts).toHaveLength(2);
+    expect(sorts[0].field).toBe('role');
+    expect(sorts[0].direction).toBe('asc');
+    expect(sorts[1].field).toBe('name');
+    expect(sorts[1].direction).toBe('desc');
+  });
+
+  it('readSortFromUrl handles percent-encoded field names', () => {
+    window.location.hash = '#fv-sort=user%20name%3Aasc';
+    const sorts = readSortFromUrl();
+    expect(sorts).toHaveLength(1);
+    expect(sorts[0].field).toBe('user name');
+    expect(sorts[0].direction).toBe('asc');
+  });
+
+  it('readSortFromUrl returns empty array when no param', () => {
     window.location.hash = '#';
-    const sort = readSortFromUrl();
-    expect(sort).toBeNull();
+    const sorts = readSortFromUrl();
+    expect(sorts).toEqual([]);
+  });
+
+  it('readSortFromUrl drops tokens with invalid direction', () => {
+    window.location.hash = '#fv-sort=role%3Aasc,name%3Ainvalid';
+    const sorts = readSortFromUrl();
+    expect(sorts).toHaveLength(1);
+    expect(sorts[0].field).toBe('role');
+    expect(sorts[0].direction).toBe('asc');
   });
 });
 

@@ -1,4 +1,4 @@
-import { LitElement, html, css } from 'lit';
+import { LitElement, html, css, nothing } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
 import { unsafeHTML } from 'lit/directives/unsafe-html.js';
 import { subscribeConfig, getFlexiConfig } from '../registry.js';
@@ -32,11 +32,20 @@ export class FvSwitcher extends LitElement {
       color: var(--fv-accent, #111);
       box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    button:disabled:hover {
+      background: var(--fv-row-hover, #f5f5f5);
+      color: var(--fv-text-muted, #666);
+    }
   `;
 
   @property() activeView: View = 'grid';
   @property({ attribute: 'for' }) targetFor?: string;
   @property({ type: Boolean, attribute: 'sync-url' }) syncUrl = false;
+  @property({ type: Array }) acceptedViews: string[] = ['grid', 'list', 'cards'];
 
   private _hashListener?: () => void;
   private _unsubscribeConfig?: () => void;
@@ -70,6 +79,11 @@ export class FvSwitcher extends LitElement {
         const view = (target as any).view;
         if (view && VIEWS.includes(view as View)) {
           this.activeView = view as View;
+        }
+
+        const targetAccepted = (target as any).acceptedViews;
+        if (Array.isArray(targetAccepted) && targetAccepted.length > 0) {
+          this.acceptedViews = targetAccepted;
         }
 
         target.addEventListener('view-change', ((e: CustomEvent) => {
@@ -118,43 +132,67 @@ export class FvSwitcher extends LitElement {
   }
 
   render() {
+    if (this.acceptedViews.length <= 1) return nothing;
+
     const icons = getFlexiConfig().icons;
     const iconMap: Record<View, string> = {
       grid: icons.gridView,
       list: icons.listView,
       cards: icons.cardsView,
     };
+
+    const currentView = this.acceptedViews.includes(this.activeView)
+      ? this.activeView
+      : (this.acceptedViews[0] as View);
+
+    const currentIndex = this.acceptedViews.indexOf(currentView);
+    const nextIndex = (currentIndex + 1) % this.acceptedViews.length;
+    const nextView = this.acceptedViews[nextIndex] as View;
+    const nextLabel = nextView.charAt(0).toUpperCase() + nextView.slice(1);
+
     return html`
       <button
         class="active"
-        @click=${this._cycle}
+        aria-label="Switch to ${nextLabel}"
         title=${t().view.switch}
+        @click=${() => this._cycle()}
       >
-        ${unsafeHTML(iconMap[this.activeView])}
+        ${unsafeHTML(iconMap[currentView] ?? '')}
       </button>
     `;
   }
 
-  private _cycle() {
-    const currentIndex = VIEWS.indexOf(this.activeView);
-    const nextIndex = (currentIndex + 1) % VIEWS.length;
-    const nextView = VIEWS[nextIndex];
+  private _cycleTo(view: View) {
+    if (!this.acceptedViews.includes(view)) return;
 
-    this.activeView = nextView;
+    this.activeView = view;
 
     if (this.syncUrl) {
-      this._updateUrl(nextView);
+      this._updateUrl(view);
     }
 
-    // 1. Dispara evento para sincronización general
-    this._notifyChange(nextView);
+    this._notifyChange(view);
 
-    // 2. Actualiza directamente el target (fallback seguro)
     if (this.targetFor) {
       const target = document.getElementById(this.targetFor) as HTMLElement | null;
       if (target) {
-        (target as any).view = nextView;
+        (target as any).view = view;
       }
     }
+  }
+
+  /**
+   * Cycles to the next view in the acceptedViews sequence.
+   * Wraps around to the beginning when reaching the end.
+   */
+  private _cycle() {
+    const views = this.acceptedViews;
+    if (views.length === 0) return;
+
+    const currentIndex = views.indexOf(this.activeView);
+    const nextIndex = (currentIndex + 1) % views.length;
+    const nextView = views[nextIndex] as View;
+
+    this._cycleTo(nextView);
   }
 }

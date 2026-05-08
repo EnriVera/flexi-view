@@ -45,7 +45,8 @@
     "test:wtr": "wtr",
     "test:e2e": "playwright test",
     "size": "size-limit",
-    "publish": "npm run build && npm publish --access public"
+    "publish": "npm run build && npm publish --access public",
+    "prepare": "husky"
   },
   "dependencies": {
     "lit": "^3.0.0"
@@ -56,6 +57,8 @@
     "@size-limit/preset-small-lib": "^11.0.0",
     "@web/test-runner": "^0.18.0",
     "@web/test-runner-playwright": "^0.11.0",
+    "ferrflow": "^4.6.3",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "playwright": "^1.40.0",
     "size-limit": "^11.0.0",

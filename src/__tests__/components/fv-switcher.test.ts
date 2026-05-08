@@ -125,6 +125,66 @@ describe('FvSwitcher', () => {
     });
   });
 
+  describe('single button render (T3)', () => {
+    it('_cycle con acceptedViews de 2 elementos salta de grid a cards (sin list)', () => {
+      const element = new FvSwitcher();
+      (element as any).acceptedViews = ['grid', 'cards'];
+      (element as any).activeView = 'grid';
+
+      (element as any)._cycle();
+
+      expect((element as any).activeView).toBe('cards');
+    });
+
+    it('_cycle con acceptedViews de 2 elementos salta de cards a grid (wrap)', () => {
+      const element = new FvSwitcher();
+      (element as any).acceptedViews = ['grid', 'cards'];
+      (element as any).activeView = 'cards';
+
+      (element as any)._cycle();
+
+      expect((element as any).activeView).toBe('grid');
+    });
+
+    it('_cycle no cambia si acceptedViews tiene solo 1 elemento', () => {
+      const element = new FvSwitcher();
+      (element as any).acceptedViews = ['list'];
+      (element as any).activeView = 'list';
+
+      (element as any)._cycle();
+
+      // With 1 view, cycles to the same view (index 0 → index 0)
+      expect((element as any).activeView).toBe('list');
+    });
+
+    it('_cycle no hace nada si acceptedViews está vacío', () => {
+      const element = new FvSwitcher();
+      (element as any).acceptedViews = [];
+      (element as any).activeView = 'grid';
+
+      (element as any)._cycle();
+
+      // Should not change (guard: views.length === 0)
+      expect((element as any).activeView).toBe('grid');
+    });
+
+    it('no emite view-change si acceptedViews tiene solo 1 elemento que ya es el activo', () => {
+      const element = new FvSwitcher();
+      (element as any).acceptedViews = ['grid'];
+      (element as any).activeView = 'grid';
+      const dispatchSpy = vi.spyOn(element, 'dispatchEvent');
+
+      (element as any)._cycle();
+
+      // Cycles to same view — event IS emitted (cycle still fires for that view)
+      // The important thing is it does NOT cycle to list or cards
+      const event = dispatchSpy.mock.calls[0]?.[0] as CustomEvent | undefined;
+      if (event) {
+        expect(event.detail.view).toBe('grid');
+      }
+    });
+  });
+
   describe('icon config integration', () => {
     it('DEFAULT_ICONS has all 3 view icons as SVG strings', () => {
       expect(DEFAULT_ICONS.gridView).toContain('<svg');

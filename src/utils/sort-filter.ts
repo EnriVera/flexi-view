@@ -1,21 +1,21 @@
-import type { SortChangeDetail } from '../types.js';
+import type { SortCriterion } from '../types.js';
 
-export type { SortChangeDetail };
+export type { SortCriterion };
 export type Filters = Record<string, unknown>;
 
-export function applySort<T>(data: T[], config: SortChangeDetail | null): T[] {
-  if (!config) return data;
-  const { field, direction } = config;
+export function applySort<T>(data: T[], sorts: SortCriterion[]): T[] {
+  if (!sorts || sorts.length === 0) return data;
   return [...data].sort((a, b) => {
-    const aVal = (a as Record<string, unknown>)[field];
-    const bVal = (b as Record<string, unknown>)[field];
-    let cmp = 0;
-    if (aVal == null && bVal == null) cmp = 0;
-    else if (aVal == null) cmp = -1;
-    else if (bVal == null) cmp = 1;
-    else if (aVal < bVal) cmp = -1;
-    else if (aVal > bVal) cmp = 1;
-    return direction === 'asc' ? cmp : -cmp;
+    for (const { field, direction } of sorts) {
+      const aVal = (a as Record<string, unknown>)[field];
+      const bVal = (b as Record<string, unknown>)[field];
+      if (aVal == null && bVal == null) continue;
+      if (aVal == null) return -1; // null-first: short-circuit BEFORE direction flip
+      if (bVal == null) return 1;
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+    }
+    return 0;
   });
 }
 

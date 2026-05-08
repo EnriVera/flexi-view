@@ -6,11 +6,14 @@ export interface ColumnConfig<T = Record<string, unknown>> {
   headerMenu?: string | false;
   visible?: boolean | ((row: T, index: number, allData: T[]) => boolean);
   disable?: boolean | ((row: T, index: number, allData: T[]) => boolean);
+  exportable?: boolean;
 }
 
 export interface DataViewOptions<T = Record<string, unknown>> {
-  data: T[];
-  columns: ColumnConfig<T>[];
+  registers: T[];
+  fieldGrids?: ColumnConfig<T>[];
+  fieldRows?: ColumnConfig<T>[];
+  fieldCards?: ColumnConfig<T>[];
   view?: 'grid' | 'list' | 'cards';
   storageKey?: string;
 }
@@ -19,8 +22,16 @@ export type ExportFormat = 'csv' | 'xlsx';
 
 export type Language = 'es' | 'en';
 
-export type SortChangeDetail = { field: string; direction: 'asc' | 'desc' | null };
+export interface SortCriterion {
+  field: string;
+  direction: 'asc' | 'desc';
+}
+export type FvSortCriterion = SortCriterion;
+
+export type SortChangeDetail = { sorts: SortCriterion[] };
+export type FvSortChangeDetail = SortChangeDetail;
 export type FilterChangeDetail = { field: string; value: unknown };
+export type FvFilterChangeDetail = { filters: Record<string, unknown> };
 export type RowClickDetail<T> = { item: T; index: number };
 export type PersistMode = 'local' | 'session' | 'none';
 
@@ -32,10 +43,10 @@ export interface ExportRequestDetail {
 
 export interface HeaderMenuElement<T = Record<string, unknown>> {
   column: ColumnConfig<T>;
-  columns: ColumnConfig<T>[];
-  data: T[];
+  fieldGrids: ColumnConfig<T>[];
+  registers: T[];
   filteredData: T[];
-  currentSort: SortChangeDetail | null;
+  currentSorts: SortCriterion[];
   currentFilters: Record<string, unknown>;
   anchor: HTMLElement | null;
   open(): void;
